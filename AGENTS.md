@@ -20,6 +20,8 @@ Words used below:
 
 `uv sync` in the training repo installs it (dev dependency). The repo root needs a `policyhub.yaml`
 (see README.md).
+The robot's ranking Space is set up once with `policyhub space --yes`, by the human (it writes to the
+org); re-run it after changing `title`, `emoji` or the org.
 `huggingface-cli login` is only needed for publishing; the human does it. After pulling a newer hub,
 re-run evals before comparing with older results if any family `VERSION` changed.
 

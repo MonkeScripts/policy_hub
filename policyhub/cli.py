@@ -1,4 +1,4 @@
-"""policyhub eval | check | bake | plant | package | publish. Run from the training repo, inside its environment."""
+"""policyhub eval | check | bake | plant | package | publish | space. Run from the training repo, inside its environment."""
 
 from __future__ import annotations
 
@@ -61,6 +61,9 @@ def main() -> None:
     u.add_argument('--force', action='store_true', help='publish even if worse or not comparable')
     u.add_argument('--private', action='store_true')
     u.add_argument('--plant-changed', action='store_true', help='accept a robot that differs from the published one')
+
+    sp = sub.add_parser('space', help="create or update the robot's ranking Space (dry run unless --yes)")
+    sp.add_argument('--yes', action='store_true')
 
     sub.add_parser('families', help='list known families')
     a = ap.parse_args()
@@ -131,6 +134,10 @@ def main() -> None:
         print('wrote', out, ':', ', '.join(sorted(p.name for p in out.iterdir())))
         for w in json.loads((out / 'training.json').read_text()).get('warnings', []):
             print('warning:', w)
+    elif a.cmd == 'space':
+        from policyhub import config
+        from policyhub.space import publish_space
+        publish_space(config.load(a.config), yes=a.yes)
     elif a.cmd == 'publish':
         from policyhub.publish import publish
         publish(a.package, a.tag, yes=a.yes, force=a.force, private=a.private, plant_changed=a.plant_changed)

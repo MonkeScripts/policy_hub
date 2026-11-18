@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Microduck Policy Hub</title>
+<title>Policy Hub</title>
 <style>
   :root {
     --bg: #fbfaf7; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e6e3dc;
@@ -77,8 +77,8 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Microduck <span>Policy Hub</span></h1>
-    <a id="orglink" href="https://huggingface.co/duckyduck369">duckyduck369</a>
+    <h1 id="title">Policy Hub</h1>
+    <a id="orglink" href="https://huggingface.co"></a>
   </header>
   <p class="sub">Every policy published with <code>policyhub</code> shows up here by its family tag. Rankings only
     compare results from the same family eval version; each policy was evaluated on its own robot (plant).
@@ -101,23 +101,16 @@
   </section>
 
   <footer>
-    Data comes straight from public Hub model repos tagged <code>microduck-family-*</code>; nothing is stored here.
+    Data comes straight from public Hub model repos tagged <code id="tagnote"></code>; nothing is stored here.
     Numbers are simulation results from each family's shared eval; real-robot logs decide.
   </footer>
 </div>
 
 <script>
 const HUB = "https://huggingface.co";
-const FAMILY_PREFIX = "microduck-family-";
-
-// Ranking rules for eval versions published before eval.json carried them (eval.ranking).
-const FALLBACK_RANKING = {
-  "velstand@1.0": {
-    getup_facedown_success: "higher", getup_faceup_success: "higher", getup_facedown_time_s: "lower",
-    "yaw_+0.3_achieved": ["closer", 0.3], "yaw_-0.3_achieved": ["closer", -0.3], "vx_0.2_achieved": ["closer", 0.2],
-    walk_falls_low_friction: "lower", walk_falls_low_supply: "lower", push_walking_up_at_end: "higher",
-  },
-};
+// space.json (written by `policyhub space`): {robot, org, title}. The robot is the tag prefix.
+let CFG = { robot: "", org: "", title: "Policy Hub" };
+const familyPrefix = () => `${CFG.robot}-family-`;
 
 const state = { policies: [], family: null, version: null, a: null, b: null };
 const $ = (id) => document.getElementById(id);
@@ -132,8 +125,10 @@ const fileURL = (p, name) => `${HUB}/${p.repo}/resolve/${p.commit}/${name}`;
 
 // -- loading ---------------------------------------------------------------------------------
 async function loadPolicies() {
-  const models = await getJSON(`${HUB}/api/models?filter=microduck&full=true&limit=1000`);
-  const repos = models.filter((m) => (m.tags || []).some((t) => t.startsWith(FAMILY_PREFIX)));
+  const q = new URLSearchParams({ filter: CFG.robot, full: "true", limit: "1000" });
+  if (CFG.org) q.set("author", CFG.org);
+  const models = await getJSON(`${HUB}/api/models?${q}`);
+  const repos = models.filter((m) => (m.tags || []).some((t) => t.startsWith(familyPrefix())));
   const out = [];
   await Promise.all(repos.map(async (m) => {
     let refs;
@@ -184,7 +179,7 @@ async function details(p) {
 // -- ranking ---------------------------------------------------------------------------------
 function rulesFor(group) {
   const fromEval = group.find((p) => p.eval.eval?.ranking)?.eval.eval.ranking;
-  return fromEval || FALLBACK_RANKING[`${group[0].family}@${group[0].version}`] || null;
+  return fromEval || null;
 }
 function score(rule, v) {
   if (v === null || v === undefined) return null;
@@ -213,7 +208,7 @@ function rank(group, rules) {
 }
 const ruleText = (r) => r === "higher" ? "↑ higher" : r === "lower" ? "↓ lower" : `→ ${r[1]}`;
 const fmt = (v) => v === null || v === undefined ? "–" : typeof v === "number" ? (Math.abs(v) >= 100 ? v.toFixed(0) : +v.toFixed(3)) : esc(v);
-const shortName = (repo) => repo.split("/").pop().replace(/^microduck-/, "");
+const shortName = (repo) => { const n = repo.split("/").pop(); return n.startsWith(`${CFG.robot}-`) ? n.slice(CFG.robot.length + 1) : n; };
 
 const plantColors = {};
 function plantChip(h) {
@@ -349,9 +344,16 @@ function trainingDiff(da, db, A, B) {
     Line these up with the metric gaps above to pick the next thing to try.</p>` + (total ? h : `<div class="muted">No differences in the recorded training settings.</div>`);
 }
 
-loadPolicies().then((ps) => {
+getJSON("space.json").then((c) => {
+  CFG = { ...CFG, ...c };
+  document.title = $("title").textContent = CFG.title;
+  $("orglink").textContent = CFG.org;
+  $("orglink").href = `${HUB}/${CFG.org}`;
+  $("tagnote").textContent = `${familyPrefix()}*`;
+  return loadPolicies();
+}).then((ps) => {
   state.policies = ps;
-  if (!ps.length) { $("ranking").innerHTML = `<div class="empty">No policies with a <code>microduck-family-*</code> tag yet.</div>`; return; }
+  if (!ps.length) { $("ranking").innerHTML = `<div class="empty">No policies with a <code>${esc(familyPrefix())}*</code> tag yet.</div>`; return; }
   render();
 }).catch((e) => { $("ranking").innerHTML = `<div class="empty err">Could not load from the Hub: ${esc(e.message)}</div>`; });
 </script>

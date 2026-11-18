@@ -9,9 +9,9 @@ mjlab tasks from there, and never changes it.
 ```
 policyhub/
 ├── policyhub/   the tool: config, policy (ONNX), sim (fixed eval conditions), plant (read out of the
-│                task), bake (the robot as plain MJCF), package (Hub folder), publish, cli
+│                task), bake (the robot as plain MJCF), package (Hub folder), publish, space (the
+│                robot's ranking page), cli
 ├── families/    one folder per action; each has eval.py (its tests and ranking) + README
-├── space/       the ranking page (static Hugging Face Space)
 └── SPEC.md      the package format
 ```
 
@@ -23,12 +23,15 @@ Add a `policyhub.yaml` at the training repo's root:
 robot: myrobot                 # tags: myrobot, myrobot-family-<f>, myrobot-plant-<h>, myrobot-eval-<f>-<v>
 org: my-hf-org                 # where the policy repos live
 space: my-hf-org/myrobot-hub   # this robot's ranking Space
+title: My Robot Policy Hub     # optional: the Space's name
+emoji: 🤖                      # optional: the Space's icon
 mass_g: [300, 2000]            # optional: plausible total mass (catches typos in the task)
 ```
 
 Then, from the training repo (AGENTS.md has the full workflow and rules):
 
 ```
+uv run policyhub space                                        # dry run; --yes creates/updates the robot's Space (once)
 uv run policyhub families
 uv run policyhub check --task <TASK> --family velstand        # contract, plant, what collides
 uv run policyhub bake --task <TASK> --out out/bake            # robot.xml + assets/, opens in any MuJoCo viewer

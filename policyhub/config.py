@@ -2,7 +2,9 @@
 
     robot: microduck            # required; tags are <robot>, <robot>-family-<f>, <robot>-plant-<h>, <robot>-eval-<f>-<v>
     org: duckyduck369           # Hugging Face org that holds the policy repos
-    space: duckyduck369/microduck-hub   # the robot's ranking Space
+    space: duckyduck369/microduck-hub   # the robot's ranking Space (`policyhub space` sets it up)
+    title: Microduck Policy Hub # optional: the Space's name (default "<robot> policy hub")
+    emoji: 🦆                   # optional: the Space's icon
     mass_g: [300, 2000]         # optional: plausible total mass, catches typos in the task
     microduck_firmware: true    # optional: refuse ONNX files the Microduck firmware cannot run (F1-F6)
 """
@@ -21,6 +23,8 @@ class Config:
     robot: str
     org: str | None = None
     space: str | None = None
+    title: str | None = None
+    emoji: str = '🤖'
     mass_g: tuple[float, float] | None = None
     microduck_firmware: bool = False
 
