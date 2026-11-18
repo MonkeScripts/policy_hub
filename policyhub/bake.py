@@ -63,12 +63,12 @@ def table(rows: list[dict]) -> str:
     return '\n'.join(lines)
 
 
-def build(task: str):
+def build(task: str, play: bool = False):
     """(cfg, spec, compiled model) for the task's robot after mjlab's edits, at the task's timestep."""
     from mjlab.entity import Entity
     from mjlab.tasks.registry import load_env_cfg
 
-    cfg = load_env_cfg(task, play=False)
+    cfg = load_env_cfg(task, play=play)
     spec = Entity(cfg.scene.entities['robot']).spec
     dt = getattr(getattr(getattr(cfg, 'sim', None), 'mujoco', None), 'timestep', None)
     if dt:

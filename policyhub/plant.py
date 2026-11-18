@@ -77,22 +77,14 @@ def sanity(d: dict, mass_g: tuple[float, float] | None = None) -> list[str]:
     return e
 
 
-def extract(task: str, notes_path: str | None = None, needs_prone: bool = False,
-            mass_g: tuple[float, float] | None = None) -> dict:
+def _robot_facts(cfg, m, task: str) -> dict:
+    """The hashed description of the robot a task builds."""
     from policyhub import contract
-    from policyhub.bake import build, colliders
 
-    cfg, _, m = build(task)  # the robot after mjlab's edits, at the task's physics timestep
-    contract.check(cfg, task, needs_prone=needs_prone)
     robot = cfg.scene.entities['robot']
     name = lambda kind, i: m.names[getattr(m, f"name_{kind}adr")[i]:].split(b'\0', 1)[0].decode()
-
     bodies = {name('body', i): round(float(m.body_mass[i]) * 1000, 2) for i in range(1, m.nbody)}
-    exprs = [e for c in robot.collisions for e in c.geom_names_expr]
-    collision_geoms = colliders(m, exprs)
-    unnamed = [c for c in collision_geoms if not c['named']]
     joints = {name('jnt', i): [round(float(x), 4) for x in m.jnt_range[i]] for i in range(m.njnt) if m.jnt_limited[i]}
-
     act_names = [j for j in joints if not j.startswith('passive_')]
     contract.check_joints(task, robot.init_state.joint_pos, act_names)
     home = {}
@@ -101,19 +93,43 @@ def extract(task: str, notes_path: str | None = None, needs_prone: bool = False,
             if re.fullmatch(pat, j):
                 home[j] = round(float(v), 4)
                 break
-
-    randomization = {k: _plain(e.params.get('ranges')) for k, e in cfg.events.items()
-                     if any(w in k for w in ('friction', 'torsion')) and 'ranges' in e.params}
-
     dt = float(m.opt.timestep)  # build() already applied the task's sim timestep
-    robot_facts = {
+    return {
         'total_mass_g': round(sum(bodies.values()), 1), 'body_mass_g': bodies,
         'joints': {'range_rad': joints, 'home_rad': home,
                    'soft_limit_factor': robot.articulation.soft_joint_pos_limit_factor},
         'actuators': [_actuator(a) for a in robot.articulation.actuators],
         'control': {'physics_dt_s': dt, 'decimation': cfg.decimation, 'hz': round(1.0 / (dt * cfg.decimation))},
     }
-    d = {'plant_hash': hashlib.sha256(json.dumps(robot_facts, sort_keys=True).encode()).hexdigest()[:16],
+
+
+def _hash(robot_facts: dict) -> str:
+    return hashlib.sha256(json.dumps(robot_facts, sort_keys=True).encode()).hexdigest()[:16]
+
+
+def extract(task: str, notes_path: str | None = None, needs_prone: bool = False,
+            mass_g: tuple[float, float] | None = None) -> dict:
+    """The plant of the train config (the robot the policy learned on). Raises if the play config,
+    which evals run, builds a different robot."""
+    from policyhub import contract
+    from policyhub.bake import build, colliders
+
+    cfg, _, m = build(task)  # the robot after mjlab's edits, at the task's physics timestep
+    contract.check(cfg, task, needs_prone=needs_prone)
+    robot = cfg.scene.entities['robot']
+    robot_facts = _robot_facts(cfg, m, task)
+    play_cfg, _, play_m = build(task, play=True)
+    if _hash(_robot_facts(play_cfg, play_m, task)) != _hash(robot_facts):
+        raise PlantError(f"task {task}: the play config (what evals run) builds a different robot than the "
+                         "train config (what the policy learned on); make them build the same robot")
+    exprs = [e for c in robot.collisions for e in c.geom_names_expr]
+    collision_geoms = colliders(m, exprs)
+    unnamed = [c for c in collision_geoms if not c['named']]
+
+    randomization = {k: _plain(e.params.get('ranges')) for k, e in cfg.events.items()
+                     if any(w in k for w in ('friction', 'torsion')) and 'ranges' in e.params}
+
+    d = {'plant_hash': _hash(robot_facts),
          'robot': robot_facts,
          'task_modelling': {'task': task, 'collision_geoms': collision_geoms, 'n_geoms': m.ngeom,
                             'unnamed_colliders': len(unnamed),
