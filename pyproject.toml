@@ -18,5 +18,4 @@ policyhub = "policyhub.cli:main"
 packages = ["policyhub"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"families" = "policyhub/families"
 "SPEC.md" = "policyhub/SPEC.md"

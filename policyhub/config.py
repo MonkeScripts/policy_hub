@@ -5,6 +5,7 @@
     space: duckyduck369/microduck-hub   # the robot's ranking Space (`policyhub space` sets it up)
     title: Microduck Policy Hub # optional: the Space's name (default "<robot> policy hub")
     emoji: 🦆                   # optional: the Space's icon
+    families: families          # this robot's evals: <families>/<name>/eval.py, relative to this file
     mass_g: [300, 2000]         # optional: plausible total mass, catches typos in the task
     microduck_firmware: true    # optional: refuse ONNX files the Microduck firmware cannot run (F1-F6)
 """
@@ -25,6 +26,7 @@ class Config:
     space: str | None = None
     title: str | None = None
     emoji: str = '🤖'
+    families: Path | None = None
     mass_g: tuple[float, float] | None = None
     microduck_firmware: bool = False
 
@@ -38,6 +40,8 @@ def load(path: Path) -> Config:
         raise SystemExit(f"{path}: unknown keys {', '.join(sorted(unknown))}")
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]*', str(d.get('robot', ''))):
         raise SystemExit(f"{path}: robot must be lowercase letters, digits and dashes, got {d.get('robot')!r}")
+    if d.get('families') is not None:
+        d['families'] = (path.parent / d['families']).resolve()
     if d.get('mass_g') is not None:
         d['mass_g'] = tuple(d['mass_g'])
     return Config(**d)

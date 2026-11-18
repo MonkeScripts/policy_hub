@@ -74,14 +74,14 @@ def main() -> None:
             importlib.import_module(mod)
 
     if a.cmd == 'families':
-        from policyhub import families
-        print('\n'.join(families.names()))
+        from policyhub import config, families
+        print('\n'.join(families.names(config.load(a.config))))
     elif a.cmd == 'check':
         from policyhub import config, families
         from policyhub.bake import table
         from policyhub.plant import extract
         cfg = config.load(a.config)
-        d = extract(a.task, needs_prone=bool(a.family) and getattr(families.load(a.family), 'NEEDS_PRONE', False),
+        d = extract(a.task, needs_prone=bool(a.family) and getattr(families.load(cfg, a.family), 'NEEDS_PRONE', False),
                     mass_g=cfg.mass_g)
         print(f"contract OK, plant_hash {d['plant_hash']}, {d['robot']['total_mass_g']} g")
         print(table(d['task_modelling']['collision_geoms']))
@@ -99,9 +99,9 @@ def main() -> None:
         print(table(r['colliders']))
         print(f"wrote {a.out / r['file']} + {r['n_meshes']} meshes ({r['assets_mb']} MB); reload matches the training model")
     elif a.cmd == 'eval':
-        from policyhub import families
+        from policyhub import config, families
         from policyhub.version import hub_version
-        fam = families.load(a.family)
+        fam = families.load(config.load(a.config), a.family)
         if a.replay:
             if not hasattr(fam, 'replay'):
                 raise SystemExit(f"family {a.family} defines no replay")

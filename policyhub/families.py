@@ -1,26 +1,28 @@
-"""Find a family's folder and load its eval.py (families/<name>/eval.py)."""
+"""Load a family's eval.py from the robot's families folder (`families` in policyhub.yaml):
+<families>/<name>/eval.py. Each robot owns its families; examples/microduck/families shows two."""
 
 from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-ROOTS = [_HERE.parent / 'families', _HERE / 'families']  # repo checkout (editable) / installed wheel
+
+def _root(cfg) -> Path:
+    if not cfg.families:
+        raise SystemExit("no families: set `families` in policyhub.yaml (see examples/microduck)")
+    if not cfg.families.is_dir():
+        raise SystemExit(f"families folder {cfg.families} does not exist")
+    return cfg.families
 
 
-def root() -> Path:
-    return next(r for r in ROOTS if r.is_dir())
+def names(cfg) -> list[str]:
+    return sorted(p.name for p in _root(cfg).iterdir() if (p / 'eval.py').is_file())
 
 
-def names() -> list[str]:
-    return sorted(p.name for p in root().iterdir() if (p / 'eval.py').is_file())
-
-
-def load(name: str):
-    path = root() / name / 'eval.py'
+def load(cfg, name: str):
+    path = _root(cfg) / name / 'eval.py'
     if not path.is_file():
-        raise SystemExit(f"no family '{name}'; known: {', '.join(names())}")
+        raise SystemExit(f"no family '{name}' in {_root(cfg)}; known: {', '.join(names(cfg))}")
     spec = importlib.util.spec_from_file_location(f"policyhub_family_{name}", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

@@ -12,7 +12,6 @@ from pathlib import Path
 from huggingface_hub import HfApi, hf_hub_download
 from huggingface_hub.utils import EntryNotFoundError, RepositoryNotFoundError
 
-from policyhub import families
 
 
 def _score(rule, v):
@@ -77,7 +76,7 @@ def publish(pkg: Path, tag: str, yes: bool = False, force: bool = False, private
             plant_changed: bool = False) -> None:
     manifest = json.loads((pkg / 'manifest.json').read_text())
     new = json.loads((pkg / 'eval.json').read_text())
-    repo, fam = manifest['repo'], families.load(new['eval']['family'])
+    repo = manifest['repo']
     old = current(repo)
     print(f"{repo}  new tag {tag}  (owner {manifest.get('owner')})")
     old_manifest = current(repo, 'manifest.json')
@@ -94,7 +93,7 @@ def publish(pkg: Path, tag: str, yes: bool = False, force: bool = False, private
         if not force:
             raise SystemExit('stopped (use --force to publish anyway)')
     else:
-        lines, worse = compare(new, old, fam.RANKING)
+        lines, worse = compare(new, old, new['eval']['ranking'])  # the rules the family recorded in eval.json
         print('\n'.join(lines))
         if worse and not force:
             raise SystemExit(f"stopped: worse than the published version on {', '.join(worse)} (--force to publish anyway)")

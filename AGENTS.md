@@ -7,7 +7,8 @@ the training repo.
 
 Words used below:
 - **family**: one action. Everyone's velstand policies are one family; a walker is another family,
-  even on the same robot. Each family has one shared eval in `families/<name>/eval.py`.
+  even on the same robot. Each family has one shared eval, `<families>/<name>/eval.py`, in the
+  folder `families` in policyhub.yaml names. Each robot owns its families.
 - **plant**: one physical robot. `plant.json` is read out of the task, never written by hand;
   `plant_hash` is the same for every task that builds the same robot.
 - **package**: the folder that becomes one tagged version (`v1`, `v2`, ...) of a Hub model repo.
@@ -169,7 +170,7 @@ Gains, HOME, joint order, supply and the rest come from the plant, not from this
 - Evals run the published ONNX, read falls from trunk tilt (over 45 deg), take every condition
   from `eval.py` (never from the task), and report an unmeasurable metric as `null` with a reason.
 
-Adding a family: create `families/<name>/eval.py` defining `FAMILY`, `VERSION`, `RANKING`,
+Adding a family: create `<families>/<name>/eval.py` (examples/microduck/families has two) defining `FAMILY`, `VERSION`, `RANKING`,
 `NEEDS_PRONE` (if it uses prone starts), `replay(task, onnx_path, path)` (one labelled mp4 of its
 scenarios) and `run(task, onnx_path) -> dict` (the eval.json
 content, built with `policyhub.sim` and `policyhub.policy`), plus a `README.md` saying what the action

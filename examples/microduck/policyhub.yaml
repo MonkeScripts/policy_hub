@@ -1,0 +1,9 @@
+# Example: put this at the root of a Microduck training repo, with families/ next to it.
+robot: microduck
+org: duckyduck369
+space: duckyduck369/microduck-hub
+title: Microduck Policy Hub
+emoji: 🦆
+families: families
+mass_g: [300, 2000]
+microduck_firmware: true
