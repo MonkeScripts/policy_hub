@@ -1,6 +1,6 @@
 """Velstand family eval: walk on command, and get back up after a fall.
 
-    uv run duckhub eval velstand --task TASK --onnx POLICY.onnx --out eval.json
+    uv run policyhub eval velstand --task TASK --onnx POLICY.onnx --out eval.json
 
 Every velstand policy (any plant) is ranked by this file. Tests:
   getup      from face-down, face-up and crouch: success (up for the whole last 1 s of 10 s),
@@ -24,8 +24,8 @@ import time
 import numpy as np
 import torch
 
-from duckhub.policy import OnnxPolicy, sha256
-from duckhub.sim import FALL_TILT, SEED, Sim, frames, make_env, write_replay
+from policyhub.policy import OnnxPolicy, sha256
+from policyhub.sim import FALL_TILT, SEED, Sim, frames, make_env, write_replay
 
 FAMILY = 'velstand'
 VERSION = '1.1'  # 1.1: the head and body commands are held like the twist (in 1.0 they redrew for one step every 2-5 s)

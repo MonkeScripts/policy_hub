@@ -3,20 +3,20 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "microduck-hub"
+name = "policyhub"
 version = "0.1.0"
-description = "Evaluate, package and publish Microduck policies to the Hugging Face Hub, per family"
+description = "Evaluate, package and publish robot policies to Hugging Face, one family at a time"
 requires-python = ">=3.10"
 # mjlab, torch and the training repo's own tasks come from the training repo's environment:
-# duckhub is installed into it (uv add --dev) and never pins them.
+# policyhub is installed into it (uv add --dev) and never pins them.
 dependencies = ["onnx>=1.16", "onnxruntime>=1.18", "huggingface_hub>=0.27", "pyyaml>=6"]
 
 [project.scripts]
-duckhub = "duckhub.cli:main"
+policyhub = "policyhub.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["duckhub"]
+packages = ["policyhub"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"families" = "duckhub/families"
-"SPEC.md" = "duckhub/SPEC.md"
+"families" = "policyhub/families"
+"SPEC.md" = "policyhub/SPEC.md"

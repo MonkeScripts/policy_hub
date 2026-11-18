@@ -15,10 +15,10 @@ import re
 import shutil
 from pathlib import Path
 
-from duckhub.policy import sha256
+from policyhub.policy import sha256
 
 NOTE = """<!--
-  Baked by duckhub from task {task}.
+  Baked by policyhub from task {task}.
   The robot after the training code's edits: masses, inertias, joint ranges, contact flags, HOME keyframe
   and the physics timestep the task uses ({dt} s, policy every {dec} steps = {hz} Hz).
   NOT in this file (see plant.json / manifest.json): the BAM servo model (actuators here are gain-1 torque

@@ -23,27 +23,27 @@ re-run evals before comparing with older results if any family `VERSION` changed
 
 Run from the training repo root. Put every output under `logs/hub/` (git-ignored).
 
-1. **Check the task** (seconds): `uv run duckhub check --task <TASK> --family <family>`
+1. **Check the task** (seconds): `uv run policyhub check --task <TASK> --family <family>`
    - A `ContractError` lists rules by number: fix them with the table below, then re-run.
    - Read every `warning:` line; tell the human about each one.
    - Read the collision table: it lists every geom that can touch something, from the compiled robot.
      Geoms marked `NO (kept from the XML)` collide although the task's collision config does not name
      them (onshape-to-robot's collision meshes are unnamed, so name filters miss them). Tell the human
      when the list is not what the task intends (e.g. a head that should not touch the floor).
-   - `uv run duckhub bake --task <TASK> --out logs/hub/bake` writes the same robot as `robot.xml` +
+   - `uv run policyhub bake --task <TASK> --out logs/hub/bake` writes the same robot as `robot.xml` +
      `assets/` to open in a viewer (`python -m mujoco.viewer --mjcf logs/hub/bake/robot.xml`).
 2. **Export the ONNX** the usual way (`scripts/export.py`, which bakes in the normalizer).
-3. **Evaluate**: `uv run duckhub eval <family> --task <TASK> --onnx <file> --out logs/hub/<name>.eval.json --replay logs/hub/<name>.replay.mp4`
+3. **Evaluate**: `uv run policyhub eval <family> --task <TASK> --onnx <file> --out logs/hub/<name>.eval.json --replay logs/hub/<name>.replay.mp4`
    - Takes several minutes on a free GPU (velstand: about 8). Run it once per ONNX, not per question.
 4. **Decide whether it is worth publishing.** Compare the headline with the published version
    (step 6's dry run does this). If it is worse on any ranked metric, stop here and report which
    metrics and by how much; do not package it.
 5. **Package**: write `policy.yaml` (below), then
-   `uv run duckhub package --onnx <file> --checkpoint logs/rsl_rl/<exp>/<run>/model_<N>.pt --eval logs/hub/<name>.eval.json --run-dir logs/rsl_rl/<exp>/<run> --meta policy.yaml --replay logs/hub/<name>.replay.mp4 --out logs/hub/<repo-name>`
+   `uv run policyhub package --onnx <file> --checkpoint logs/rsl_rl/<exp>/<run>/model_<N>.pt --eval logs/hub/<name>.eval.json --run-dir logs/rsl_rl/<exp>/<run> --meta policy.yaml --replay logs/hub/<name>.replay.mp4 --out logs/hub/<repo-name>`
    - `--checkpoint` is the `.pt` the ONNX was exported from: it gives the training position, and the
      card's final reward weights come from the task's own curricula applied there. Read every
      `warning:` line (e.g. task code changed since training) and pass them on to the human.
-6. **Dry run**: `uv run duckhub publish logs/hub/<repo-name> --tag vN`
+6. **Dry run**: `uv run policyhub publish logs/hub/<repo-name> --tag vN`
    - Prints the comparison with the published version, any plant change, warnings, and the file list.
    - Show this output to the human, unedited.
 7. **Publish** only when the human says so for this package: add `--yes`.
@@ -68,7 +68,7 @@ Run from the training repo root. Put every output under `logs/hub/` (git-ignored
 
 | Rule | Requirement | Usual fix in a template repo |
 |---|---|---|
-| C1 | The task is in the mjlab registry | Register it in `tasks/__init__.py`; check with `uv run list-envs`. If your code registers tasks only when a module is imported, pass that module: `duckhub --import <module> check ...` (on every duckhub command) |
+| C1 | The task is in the mjlab registry | Register it in `tasks/__init__.py`; check with `uv run list-envs`. If your code registers tasks only when a module is imported, pass that module: `policyhub --import <module> check ...` (on every policyhub command) |
 | C2 | Scene entity `"robot"` with a `spec_fn` that compiles | Keep the template's entity name |
 | C3 | `actuators[0]` is a BAM servo config (`BamActuatorCfg` or a subclass) with `kp_fw`, `delay_min_lag`, `delay_max_lag`, a servo model (`json_path`, or `motor_name` + `model`) and a supply (`vin` or `vin_range`). `kd_fw`, `max_pwm`, sag and floor are recorded when present | Set the missing fields on the actuator config |
 | C4 | `init_state.joint_pos` (HOME) covers every actuated joint | Add the joint's regex to HOME |
@@ -89,7 +89,7 @@ always typos in the training repo: find and fix the source, do not work around t
 ## The firmware contract (what `package` and `check --onnx` enforce on policy.onnx)
 
 The robot runs a policy only after microduck_runtime's `tools/export_policy.py` converts it, and that
-converter refuses anything else. `duckhub package` refuses the same files, so nothing on the Hub fails there.
+converter refuses anything else. `policyhub package` refuses the same files, so nothing on the Hub fails there.
 
 | Rule | Requirement |
 |---|---|
@@ -98,7 +98,7 @@ converter refuses anything else. `duckhub package` refuses the same files, so no
 | F3 | metadata `observation_names` = `base_ang_vel,projected_gravity,joint_pos,joint_vel,actions,command,head_command,body_command` |
 | F4 | metadata `action_scale` = 1 |
 | F5 | metadata `joint_names` in the firmware's order: left hip_yaw, hip_roll, hip_pitch, knee, ankle, neck_pitch, head_pitch, head_yaw, head_roll, then right hip_yaw .. ankle |
-| F6 | metadata `default_joint_pos` is 14 finite values within 1 rad (the firmware's rule: each policy carries its own HOME), and matches the task's HOME within 1e-3 rad (duckhub's addition) |
+| F6 | metadata `default_joint_pos` is 14 finite values within 1 rad (the firmware's rule: each policy carries its own HOME), and matches the task's HOME within 1e-3 rad (policyhub's addition) |
 
 The template's `scripts/export.py` writes all of this. Changing the network size, the observations or
 the exporter breaks it: the firmware would need a matching change first.
@@ -163,5 +163,5 @@ Gains, HOME, joint order, supply and the rest come from the plant, not from this
 Adding a family: create `families/<name>/eval.py` defining `FAMILY`, `VERSION`, `RANKING`,
 `NEEDS_PRONE` (if it uses prone starts), `replay(task, onnx_path, path)` (one labelled mp4 of its
 scenarios) and `run(task, onnx_path) -> dict` (the eval.json
-content, built with `duckhub.sim` and `duckhub.policy`), plus a `README.md` saying what the action
+content, built with `policyhub.sim` and `policyhub.policy`), plus a `README.md` saying what the action
 is and what each ranked metric means. Test only what that action is for.

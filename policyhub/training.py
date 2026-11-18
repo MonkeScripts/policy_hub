@@ -30,7 +30,7 @@ def live_final(task: str, env_steps: int, env_yaml: dict) -> tuple[dict | None, 
     from mjlab.envs import ManagerBasedRlEnv
     from mjlab.tasks.registry import load_env_cfg
 
-    from duckhub.plant import _plain
+    from policyhub.plant import _plain
 
     cfg = load_env_cfg(task, play=False)
     planned = {k: v['weight'] for k, v in (env_yaml.get('rewards') or {}).items()}

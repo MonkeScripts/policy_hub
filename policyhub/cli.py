@@ -1,4 +1,4 @@
-"""duckhub eval | check | bake | plant | package | publish. Run from the training repo, inside its environment."""
+"""policyhub eval | check | bake | plant | package | publish. Run from the training repo, inside its environment."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import yaml
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(prog='duckhub')
+    ap = argparse.ArgumentParser(prog='policyhub')
     ap.add_argument('--import', dest='imports', action='append', default=[], metavar='MODULE',
                     help='import a module that registers tasks before looking them up (repeatable), '
                          "for training code that registers on import instead of through mjlab's entry point")
@@ -43,11 +43,11 @@ def main() -> None:
 
     k = sub.add_parser('package', help='build the Hub package folder')
     k.add_argument('--onnx', required=True, type=Path)
-    k.add_argument('--eval', required=True, type=Path, help='eval.json from `duckhub eval`')
+    k.add_argument('--eval', required=True, type=Path, help='eval.json from `policyhub eval`')
     k.add_argument('--run-dir', required=True, type=Path, help='the training run (with params/env.yaml, agent.yaml)')
     k.add_argument('--meta', required=True, type=Path, help='policy.yaml: repo, name, description, command, notes')
     k.add_argument('--plant-notes', type=Path)
-    k.add_argument('--replay', type=Path, help='replay.mp4 from `duckhub eval --replay`')
+    k.add_argument('--replay', type=Path, help='replay.mp4 from `policyhub eval --replay`')
     k.add_argument('--checkpoint', type=Path, help='the .pt the ONNX was exported from (training position)')
     k.add_argument('--out', required=True, type=Path)
 
@@ -68,29 +68,29 @@ def main() -> None:
             importlib.import_module(mod)
 
     if a.cmd == 'families':
-        from duckhub import families
+        from policyhub import families
         print('\n'.join(families.names()))
     elif a.cmd == 'check':
-        from duckhub import families
-        from duckhub.bake import table
-        from duckhub.plant import extract
+        from policyhub import families
+        from policyhub.bake import table
+        from policyhub.plant import extract
         d = extract(a.task, needs_prone=bool(a.family) and getattr(families.load(a.family), 'NEEDS_PRONE', False))
         print(f"contract OK, plant_hash {d['plant_hash']}, {d['robot']['total_mass_g']} g")
         print(table(d['task_modelling']['collision_geoms']))
         for w in d.get('warnings', []):
             print('warning:', w)
         if a.onnx:
-            from duckhub.contract import check_onnx
+            from policyhub.contract import check_onnx
             check_onnx(a.onnx, d['robot']['joints']['home_rad'])
             print(f'{a.onnx}: firmware contract OK')
     elif a.cmd == 'bake':
-        from duckhub.bake import bake, table
+        from policyhub.bake import bake, table
         r = bake(a.task, a.out)
         print(table(r['colliders']))
         print(f"wrote {a.out / r['file']} + {r['n_meshes']} meshes ({r['assets_mb']} MB); reload matches the training model")
     elif a.cmd == 'eval':
-        from duckhub import families
-        from duckhub.version import hub_version
+        from policyhub import families
+        from policyhub.version import hub_version
         fam = families.load(a.family)
         if a.replay:
             if not hasattr(fam, 'replay'):
@@ -106,13 +106,13 @@ def main() -> None:
         print(json.dumps(res['headline'], indent=1))
         print(f"wrote {a.out} in {res['runtime_s']} s")
     elif a.cmd == 'plant':
-        from duckhub.plant import extract
+        from policyhub.plant import extract
         d = extract(a.task, a.notes)
         Path(a.out).write_text(json.dumps(d, indent=1) + '\n')
         print(f"plant_hash {d['plant_hash']} -> {a.out}")
     elif a.cmd == 'package':
-        from duckhub.package import build
-        from duckhub.plant import extract
+        from policyhub.package import build
+        from policyhub.plant import extract
         ev = json.loads(a.eval.read_text())
         meta = yaml.safe_load(a.meta.read_text())
         out = build(onnx=a.onnx, run_dir=a.run_dir, eval_res=ev, meta=meta,
@@ -121,7 +121,7 @@ def main() -> None:
         for w in json.loads((out / 'training.json').read_text()).get('warnings', []):
             print('warning:', w)
     elif a.cmd == 'publish':
-        from duckhub.publish import publish
+        from policyhub.publish import publish
         publish(a.package, a.tag, yes=a.yes, force=a.force, private=a.private, plant_changed=a.plant_changed)
 
 

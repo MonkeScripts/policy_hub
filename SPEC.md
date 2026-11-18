@@ -9,15 +9,15 @@ tag in the same repo, never a new repo.
 | file | made by | contents |
 |---|---|---|
 | `policy.onnx` | the training repo's export | 61 obs -> 14 actions, normalizer baked in; graph and metadata (`joint_names`, `observation_names`, `action_scale`, `default_joint_pos`) as the firmware contract F1-F6 in AGENTS.md requires |
-| `manifest.json` | `duckhub package` | how to run it: Pollen's schema 2 + the fields below |
-| `plant.json` | `duckhub package` (read out of the task) | which robot |
-| `training.json` | `duckhub package`, from the run's `params/env.yaml` + `agent.yaml` | how it was trained |
-| `eval.json` | `duckhub eval <family>` | the family's metrics |
-| `README.md` | `duckhub package` | the Hub page; YAML header = tags + headline metrics (`model-index`) |
-| `robot.xml` | `duckhub package` (baked from the task) | the robot as the task simulated it: bodies, masses, inertias, joint ranges, contact flags, HOME keyframe, physics timestep. Not the servo model: actuators are plain torque motors here, BAM lives in `plant.json` |
-| `assets/` | `duckhub package` | the meshes `robot.xml` references, unchanged from the training repo |
-| `checkpoint.pt` | `duckhub package --checkpoint` | optional: the rsl_rl training checkpoint the ONNX was exported from (actor, critic, optimizer, iteration, step counter), so training can continue exactly where it stopped |
-| `replay.mp4` | `duckhub eval --replay` | the family's replay scenarios back to back, labelled, fixed camera; embedded in the card |
+| `manifest.json` | `policyhub package` | how to run it: Pollen's schema 2 + the fields below |
+| `plant.json` | `policyhub package` (read out of the task) | which robot |
+| `training.json` | `policyhub package`, from the run's `params/env.yaml` + `agent.yaml` | how it was trained |
+| `eval.json` | `policyhub eval <family>` | the family's metrics |
+| `README.md` | `policyhub package` | the Hub page; YAML header = tags + headline metrics (`model-index`) |
+| `robot.xml` | `policyhub package` (baked from the task) | the robot as the task simulated it: bodies, masses, inertias, joint ranges, contact flags, HOME keyframe, physics timestep. Not the servo model: actuators are plain torque motors here, BAM lives in `plant.json` |
+| `assets/` | `policyhub package` | the meshes `robot.xml` references, unchanged from the training repo |
+| `checkpoint.pt` | `policyhub package --checkpoint` | optional: the rsl_rl training checkpoint the ONNX was exported from (actor, critic, optimizer, iteration, step counter), so training can continue exactly where it stopped |
+| `replay.mp4` | `policyhub eval --replay` | the family's replay scenarios back to back, labelled, fixed camera; embedded in the card |
 | `runs/` | later | TensorBoard files (the Hub shows a Metrics tab) |
 
 ## manifest.json (our fields; the robot daemon ignores unknown fields)

@@ -12,7 +12,7 @@ from pathlib import Path
 from huggingface_hub import HfApi, hf_hub_download
 from huggingface_hub.utils import EntryNotFoundError, RepositoryNotFoundError
 
-from duckhub import families
+from policyhub import families
 
 
 def _score(rule, v):

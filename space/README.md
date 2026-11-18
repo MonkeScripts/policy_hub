@@ -15,6 +15,6 @@ tags:
 
 # Microduck Policy Hub
 
-Ranks and compares Microduck policies published with `duckhub` (microduck-hub). The page reads
+Ranks and compares Microduck policies published with `policyhub` (microduck-hub). The page reads
 public Hub model repos tagged `microduck-family-*` straight from the browser; nothing is stored
 in this Space. Source: `space/` in microduck-hub. Do not edit the Space directly.

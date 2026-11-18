@@ -21,7 +21,7 @@ def load(name: str):
     path = root() / name / 'eval.py'
     if not path.is_file():
         raise SystemExit(f"no family '{name}'; known: {', '.join(names())}")
-    spec = importlib.util.spec_from_file_location(f"duckhub_family_{name}", path)
+    spec = importlib.util.spec_from_file_location(f"policyhub_family_{name}", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     for attr in ('FAMILY', 'VERSION', 'RANKING', 'run'):

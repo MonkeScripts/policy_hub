@@ -1,5 +1,5 @@
 """Build one policy package: the folder that becomes one tagged revision of a Hub model repo.
-See SPEC.md. Called by `duckhub package`.
+See SPEC.md. Called by `policyhub package`.
 """
 
 from __future__ import annotations
@@ -10,8 +10,8 @@ from pathlib import Path
 
 import yaml
 
-from duckhub.policy import sha256
-from duckhub.version import git
+from policyhub.policy import sha256
+from policyhub.version import git
 
 SPEC_VERSION = 2
 
@@ -245,8 +245,8 @@ def card(m: dict, t: dict, e: dict, plant: dict, has_replay: bool = False, has_c
 
 def build(*, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: dict, out: Path,
           replay: Path | None = None, checkpoint: Path | None = None) -> Path:
-    from duckhub.contract import check_onnx
-    from duckhub.training import checkpoint_position, live_final, unknown_curricula
+    from policyhub.contract import check_onnx
+    from policyhub.training import checkpoint_position, live_final, unknown_curricula
 
     check_onnx(onnx, plant['robot']['joints']['home_rad'])
     for k in ('repo', 'owner', 'name', 'servos', 'description', 'command'):
@@ -279,7 +279,7 @@ def build(*, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: dict,
         unknown = unknown_curricula(env)
         if unknown:
             warnings.append(f"curriculum terms the plan replay cannot read (their effect is missing): {', '.join(unknown)}")
-    from duckhub.bake import bake
+    from policyhub.bake import bake
     out.mkdir(parents=True, exist_ok=True)
     model = bake(eval_res['task'], out)
     shutil.copy(onnx, out / 'policy.onnx')

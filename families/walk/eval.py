@@ -1,6 +1,6 @@
 """Walk family eval: follow a velocity command (vx, vy, yaw) and stay up. No get-up: a fall ends it.
 
-    uv run duckhub eval walk --task TASK --onnx POLICY.onnx --out eval.json [--replay replay.mp4]
+    uv run policyhub eval walk --task TASK --onnx POLICY.onnx --out eval.json [--replay replay.mp4]
 
 Every walk policy (any plant) is ranked by this file. Every robot starts standing at HOME. Tests:
   tracking   commands from standstill: yaw +-0.3, +-1.0 rad/s, vx 0.1 / 0.2 / 0.3 m/s; mean of the
@@ -20,8 +20,8 @@ import time
 
 import torch
 
-from duckhub.policy import OnnxPolicy, sha256
-from duckhub.sim import FALL_TILT, SEED, Sim, frames, make_env, write_replay
+from policyhub.policy import OnnxPolicy, sha256
+from policyhub.sim import FALL_TILT, SEED, Sim, frames, make_env, write_replay
 
 FAMILY = 'walk'
 VERSION = '1.1'  # 1.1: the head and body commands are held like the twist (in 1.0 they redrew for one step every 2-5 s)

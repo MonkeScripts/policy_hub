@@ -139,7 +139,7 @@ def _onnx_errors(model, home: dict | None) -> list[str]:
 
 def check_onnx(path, home: dict | None = None) -> None:
     """F1-F6 on an exported policy. The firmware's converter refuses anything failing them, except the
-    match with the task's HOME in F6, which only duckhub can check."""
+    match with the task's HOME in F6, which only policyhub can check."""
     import onnx
 
     e = _onnx_errors(onnx.load(str(path)), home)

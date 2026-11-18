@@ -5,7 +5,7 @@ builds (compiled model masses and collision geometry, servo model and gains, sup
 HOME, joint ranges, friction randomization, control rate). An optional notes file next to the
 task adds where the numbers came from; notes do not change `plant_hash`.
 
-Collision geometry is read from the compiled robot after mjlab's edits (duckhub.bake), not matched
+Collision geometry is read from the compiled robot after mjlab's edits (policyhub.bake), not matched
 by name: onshape-to-robot's collision meshes are unnamed, so a name filter neither removes them in
 training nor finds them here.
 
@@ -26,7 +26,7 @@ from pathlib import Path
 
 import yaml
 
-from duckhub.policy import sha256
+from policyhub.policy import sha256
 
 
 def _plain(v):
@@ -78,8 +78,8 @@ def sanity(d: dict) -> list[str]:
 
 
 def extract(task: str, notes_path: str | None = None, needs_prone: bool = False) -> dict:
-    from duckhub import contract
-    from duckhub.bake import build, colliders
+    from policyhub import contract
+    from policyhub.bake import build, colliders
 
     cfg, _, m = build(task)  # the robot after mjlab's edits, at the task's physics timestep
     contract.check(cfg, task, needs_prone=needs_prone)
