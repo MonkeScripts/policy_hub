@@ -1,14 +1,14 @@
-# Microduck policy package, spec v2
+# Policy package, spec v2
 
 One package = one tagged revision of a Hub model repo. One repo per family per person, in the
-shared org: `duckyduck369/microduck-<robot>-<family>-<owner>`; a new version is a new commit +
+shared org: `<org>/<name>-<owner>`; a new version is a new commit +
 tag in the same repo, never a new repo.
 
 ## Files
 
 | file | made by | contents |
 |---|---|---|
-| `policy.onnx` | the training repo's export | 61 obs -> 14 actions, normalizer baked in; graph and metadata (`joint_names`, `observation_names`, `action_scale`, `default_joint_pos`) as the firmware contract F1-F6 in AGENTS.md requires |
+| `policy.onnx` | the training repo's export | normalizer baked in; metadata `joint_names`, `observation_names`, `action_scale`, `default_joint_pos`; for a Microduck also the firmware contract F1-F6 in AGENTS.md |
 | `manifest.json` | `policyhub package` | how to run it: Pollen's schema 2 + the fields below |
 | `plant.json` | `policyhub package` (read out of the task) | which robot |
 | `training.json` | `policyhub package`, from the run's `params/env.yaml` + `agent.yaml` | how it was trained |
@@ -60,18 +60,19 @@ tag in the same repo, never a new repo.
 
 ## Card header
 
-Topic tags are how the Hub (and the Space) find policies: `microduck-family-*` = same ranking,
-`microduck-plant-*` = same robot, `microduck-eval-*` = results that can be compared directly.
+Topic tags are how the Hub (and the robot's Space) find policies. `<robot>` is `robot` in
+policyhub.yaml: `<robot>-family-*` = same ranking, `<robot>-plant-*` = same physical robot,
+`<robot>-eval-*` = results that can be compared directly.
 Versions are git tags on the repo (`v1`, `v2`, ...), never topic tags.
 
 ```yaml
-tags: [microduck, microduck-family-<family>, microduck-plant-<plant_hash>, microduck-eval-<family>-<version>,
+tags: [<robot>, <robot>-family-<family>, <robot>-plant-<plant_hash>, <robot>-eval-<family>-<version>,
        robotics, reinforcement-learning]
 model-index:
 - name: <repo name>
   results:
   - task: {type: reinforcement-learning, name: <description>}
-    dataset: {name: "<family> eval v<version>", type: microduck-sim}
+    dataset: {name: "<family> eval v<version>", type: <robot>-sim}
     metrics: [{name, type, value}, ...]   # = eval.json headline
 ```
 

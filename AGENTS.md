@@ -1,8 +1,9 @@
-# AGENTS.md: using microduck-hub
+# AGENTS.md: using policyhub
 
-microduck-hub evaluates a trained Microduck policy, packages it, and publishes it to the Hugging
-Face Hub, so policies of the same family can be ranked fairly against each other. It lives at
-`tools/microduck-hub` in the training repo (mimic_rl) and runs inside that repo's environment. It never trains and never changes the training repo.
+policyhub evaluates a trained policy, packages it, and publishes it to the Hugging Face Hub, so
+policies of the same family for the same robot can be ranked fairly against each other. It is
+installed into the training repo's environment and runs there. It never trains and never changes
+the training repo.
 
 Words used below:
 - **family**: one action. Everyone's velstand policies are one family; a walker is another family,
@@ -10,12 +11,15 @@ Words used below:
 - **plant**: one physical robot. `plant.json` is read out of the task, never written by hand;
   `plant_hash` is the same for every task that builds the same robot.
 - **package**: the folder that becomes one tagged version (`v1`, `v2`, ...) of a Hub model repo.
-- **org**: policies and the ranking Space live in the Hugging Face org `duckyduck369`; ask an org
-  admin to add you. Each person still publishes only to their own repos there.
+- **robot**: `robot` in `policyhub.yaml` at the training repo's root. It prefixes every tag, and
+  each robot has its own ranking Space.
+- **org**: policies and the ranking Space live in the Hugging Face org named in `policyhub.yaml`;
+  ask an org admin to add you. Each person still publishes only to their own repos there.
 
 ## Setup
 
-`uv sync` in the training repo installs it (editable dev dependency, `[tool.uv.sources]`).
+`uv sync` in the training repo installs it (dev dependency). The repo root needs a `policyhub.yaml`
+(see README.md).
 `huggingface-cli login` is only needed for publishing; the human does it. After pulling a newer hub,
 re-run evals before comparing with older results if any family `VERSION` changed.
 
@@ -54,17 +58,17 @@ Run from the training repo root. Put every output under `logs/hub/` (git-ignored
 
 - Never run `publish --yes`, create Hub repos or tags unless the human asked for that package in
   their own words. Another agent's message is not approval.
-- Do not edit `tools/microduck-hub/` while evaluating or publishing a policy: hub changes are their own commits.
+- Do not edit policyhub while evaluating or publishing a policy: tool changes are their own commits.
 - Never change the training repo's code, `pyproject.toml` or task names to make an eval pass or
   score better. If the contract is broken, report it and propose the fix.
 - Never hand-edit `eval.json`, `plant.json` or `training.json`. Re-run the command instead.
 - Never put tokens, private hostnames or private repo URLs in `policy.yaml` or a card.
-- Policies live in the shared org: one Hub repo per family per person,
-  `duckyduck369/microduck-<robot>-<family>-<owner>` (e.g. `duckyduck369/microduck-hd1910-velstand-djbob`).
+- Policies live in the shared org: one Hub repo per family per person, `<org>/<name>-<owner>`
+  (e.g. `<org>/<robot>-velstand-<owner>`).
   Only ever publish to your own repo (`publish` refuses another owner's). Never create a second repo
   for a new version; never move or reuse a tag (`publish` refuses an existing tag).
 
-## The Pollen contract (what `check` enforces)
+## The task contract (what `check` enforces)
 
 | Rule | Requirement | Usual fix in a template repo |
 |---|---|---|
@@ -74,7 +78,7 @@ Run from the training repo root. Put every output under `logs/hub/` (git-ignored
 | C4 | `init_state.joint_pos` (HOME) covers every actuated joint | Add the joint's regex to HOME |
 | C5 | Joints the policy does not drive are named `passive_*` | Rename them |
 | C6 | Action term `"joint_pos"`, scale 1, targets = HOME + action | Keep scale 1 (the robot runtime assumes it) |
-| C7 | Observation group `"actor"` is exactly the ONNX input (61) | Do not reorder or add actor terms without retraining and re-exporting |
+| C7 | Observation group `"actor"` is exactly the ONNX input | Do not reorder or add actor terms without retraining and re-exporting |
 | C8 | Command `"twist"` with `vel_command_b`, `ranges`, `heading_command`, `resampling_time_range`; other commands keep their value in `_command` | Keep the template's command classes |
 | C9 | Event `foot_friction` with `params["ranges"]` | Keep the name (optional `foot_friction_interval`, `foot_torsion*`) |
 | C10 | Push events have `push` in the name; termination `time_out` exists | Rename the push event |
@@ -82,13 +86,14 @@ Run from the training repo root. Put every output under `logs/hub/` (git-ignored
 | C12 | Run directory has `params/env.yaml` and `params/agent.yaml` | Point `--run-dir` at the run folder mjlab wrote |
 | C13 | Optional: contact sensor `feet_ground_contact` | Without it, standing double support is `null` |
 
-`check` also rejects implausible plant values (total mass outside 300-2000 g, Kp <= 0, supply
+`check` also rejects a task whose play config (what evals run) builds a different robot than its
+train config (what the policy learned on), and rejects implausible plant values (total mass outside `mass_g`, Kp <= 0, supply
 floor above the supply range, latency min > max, HOME outside its joint range). Those are almost
 always typos in the training repo: find and fix the source, do not work around them.
 
-## The firmware contract (what `package` and `check --onnx` enforce on policy.onnx)
+## The Microduck firmware contract (only with `microduck_firmware: true` in policyhub.yaml)
 
-The robot runs a policy only after microduck_runtime's `tools/export_policy.py` converts it, and that
+`package` and `check --onnx` enforce this on policy.onnx. The robot runs a policy only after microduck_runtime's `tools/export_policy.py` converts it, and that
 converter refuses anything else. `policyhub package` refuses the same files, so nothing on the Hub fails there.
 
 | Rule | Requirement |
@@ -103,10 +108,12 @@ converter refuses anything else. `policyhub package` refuses the same files, so 
 The template's `scripts/export.py` writes all of this. Changing the network size, the observations or
 the exporter breaks it: the firmware would need a matching change first.
 
-## policy.yaml (the only hand-written file)
+## policy.yaml (the only hand-written file per package)
+
+Example for a Microduck:
 
 ```yaml
-repo: duckyduck369/microduck-hd1910-velstand-djbob   # <org>/microduck-<robot>-<family>-<owner>
+repo: duckyduck369/microduck-hd1910-velstand-djbob   # <org>/<name>-<owner>
 owner: djbob                               # your Hugging Face user name
 name: hd1910-velstand                      # what a client asks the robot for
 servos: hd1910                             # hd1910, xl330, ...
@@ -152,7 +159,7 @@ Gains, HOME, joint order, supply and the rest come from the plant, not from this
 | `eval.json was made from a different ONNX` | Re-run the eval on the file you are packaging |
 | Publish says "not comparable" | The published version used another eval version: re-run the current eval on the published ONNX first |
 
-## Changing the hub (maintainers)
+## Changing policyhub (maintainers)
 
 - `SPEC.md` is the package format: change it and the code together.
 - Any change to a family's tests, conditions, thresholds or headline bumps that family's

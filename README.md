@@ -1,39 +1,46 @@
-# microduck-hub
+# policyhub
 
-Evaluate, package and publish Microduck policies to the Hugging Face Hub, one family at a time.
-Training stays in your own repo (Pollen's microduck_rl template, your own tasks); this tool is
-installed into that repo's environment and reads its tasks from there.
+Evaluate, package and publish RL policies to the Hugging Face Hub, one family at a time, so
+policies for the same robot can be ranked against each other in that robot's Space.
+
+Training stays in your own repo. policyhub is installed into that repo's environment, reads its
+mjlab tasks from there, and never changes it.
 
 ```
-microduck-hub/
-├── policyhub/           the tool: policy (ONNX), sim (fixed eval conditions), plant (read out of
-│                      the task), bake (the robot as plain MJCF), package (Hub folder),
-│                      publish (compare with the Hub, push), cli
-├── families/          one folder per action; each has eval.py (its tests and ranking) + README
-│   ├── velstand/
-│   └── walk/
-├── space/             the ranking page (static Hugging Face Space)
-└── SPEC.md            the package format
+policyhub/
+├── policyhub/   the tool: config, policy (ONNX), sim (fixed eval conditions), plant (read out of the
+│                task), bake (the robot as plain MJCF), package (Hub folder), publish, cli
+├── families/    one folder per action; each has eval.py (its tests and ranking) + README
+├── space/       the ranking page (static Hugging Face Space)
+└── SPEC.md      the package format
 ```
 
 ## Use
 
-`uv sync` in the training repo installs it (see AGENTS.md for the full workflow and rules):
+Add a `policyhub.yaml` at the training repo's root:
+
+```yaml
+robot: myrobot                 # tags: myrobot, myrobot-family-<f>, myrobot-plant-<h>, myrobot-eval-<f>-<v>
+org: my-hf-org                 # where the policy repos live
+space: my-hf-org/myrobot-hub   # this robot's ranking Space
+mass_g: [300, 2000]            # optional: plausible total mass (catches typos in the task)
+```
+
+Then, from the training repo (AGENTS.md has the full workflow and rules):
 
 ```
 uv run policyhub families
-uv run policyhub check --task <TASK> --family velstand          # contract, plant, what collides
-uv run policyhub check --task <TASK> --onnx exports/x.onnx         # the firmware contract (package enforces it too)
-uv run policyhub bake --task <TASK> --out out/bake               # robot.xml + assets/, opens in any MuJoCo viewer
-uv run policyhub eval velstand --task <TASK> --onnx exports/x.onnx --out eval.json
-uv run policyhub package --onnx exports/x.onnx --checkpoint logs/rsl_rl/<exp>/<run>/model_N.pt --eval eval.json --run-dir logs/rsl_rl/<exp>/<run> \
-    --meta policy.yaml --out out/microduck-<robot>-velstand-<you>
-uv run policyhub publish out/microduck-<robot>-velstand-<you> --tag v1          # dry run: compares, uploads nothing
-uv run policyhub publish out/microduck-<robot>-velstand-<you> --tag v1 --yes    # push + tag
+uv run policyhub check --task <TASK> --family velstand        # contract, plant, what collides
+uv run policyhub bake --task <TASK> --out out/bake            # robot.xml + assets/, opens in any MuJoCo viewer
+uv run policyhub eval velstand --task <TASK> --onnx x.onnx --out eval.json
+uv run policyhub package --onnx x.onnx --checkpoint <run>/model_N.pt --eval eval.json --run-dir <run> \
+    --meta policy.yaml --out out/<repo-name>
+uv run policyhub publish out/<repo-name> --tag v1             # dry run: compares, uploads nothing
+uv run policyhub publish out/<repo-name> --tag v1 --yes       # push + tag
 ```
 
-`policy.yaml` is the only hand-written file: repo (`duckyduck369/microduck-<robot>-<family>-<owner>`), owner, name, description, servos, slot, what the
-command inputs mean, runtime notes, lineage, where the code lives.
+`policy.yaml` is the only hand-written file per package: repo (`<org>/<name>-<owner>`), owner,
+name, description, servos, what the command inputs mean, runtime notes, lineage.
 
 ## Adding a family
 
@@ -43,13 +50,11 @@ eval.json content. Everyone ranking that family uses the same file.
 
 ## Using a package without this tool
 
-Every package carries `robot.xml` + `assets/`: the robot exactly as the task simulated it. Tools that
-only need some files download just those:
+Every package carries `robot.xml` + `assets/`: the robot exactly as the task simulated it. Download
+only the files you need:
 
 ```python
 from huggingface_hub import snapshot_download
-d = snapshot_download('duckyduck369/microduck-hd1910-velstand-djbob', revision='v5',
-                      allow_patterns=['policy.onnx', 'manifest.json'])            # firmware: ~0.8 MB
-d = snapshot_download('duckyduck369/microduck-hd1910-velstand-djbob', revision='v5',
-                      allow_patterns=['robot.xml', 'assets/*', 'plant.json'])      # viewers: ~22 MB
+d = snapshot_download('<org>/<repo>', revision='v1', allow_patterns=['policy.onnx', 'manifest.json'])
+d = snapshot_download('<org>/<repo>', revision='v1', allow_patterns=['robot.xml', 'assets/*', 'plant.json'])
 ```
