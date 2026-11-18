@@ -186,17 +186,18 @@ def acceptance_section(e: dict) -> list[str]:
 
 
 def card(m: dict, t: dict, e: dict, plant: dict, has_replay: bool = False, has_checkpoint: bool = False) -> str:
+    robot = m['robot']['model']
     rows = list(e['headline'].items())
     ev = e['eval']
     meta = {
         'license': 'apache-2.0',
         'library_name': 'onnx',
-        'tags': ['microduck', f"microduck-family-{m['family']}", f"microduck-plant-{m['plant']['plant_hash']}",
-                 f"microduck-eval-{ev['family']}-{ev['version']}",
+        'tags': [robot, f"{robot}-family-{m['family']}", f"{robot}-plant-{m['plant']['plant_hash']}",
+                 f"{robot}-eval-{ev['family']}-{ev['version']}",
                  'robotics', 'reinforcement-learning'],
         'model-index': [{'name': m['repo'].split('/')[1], 'results': [{
             'task': {'type': 'reinforcement-learning', 'name': m['description']},
-            'dataset': {'name': f"{ev['family']} eval v{ev['version']}", 'type': 'microduck-sim'},
+            'dataset': {'name': f"{ev['family']} eval v{ev['version']}", 'type': f'{robot}-sim'},
             'metrics': [{'name': k, 'type': k, 'value': v} for k, v in rows],
         }]}],
     }
@@ -243,17 +244,24 @@ def card(m: dict, t: dict, e: dict, plant: dict, has_replay: bool = False, has_c
     return '\n'.join(lines)
 
 
-def build(*, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: dict, out: Path,
+def obs_len(onnx_path: Path) -> int:
+    import onnx
+
+    return onnx.load(str(onnx_path)).graph.input[0].type.tensor_type.shape.dim[-1].dim_value
+
+
+def build(*, cfg, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: dict, out: Path,
           replay: Path | None = None, checkpoint: Path | None = None) -> Path:
-    from policyhub.contract import check_onnx
     from policyhub.training import checkpoint_position, live_final, unknown_curricula
 
-    check_onnx(onnx, plant['robot']['joints']['home_rad'])
+    if cfg.microduck_firmware:
+        from policyhub.microduck import check_onnx
+        check_onnx(onnx, plant['robot']['joints']['home_rad'])
     for k in ('repo', 'owner', 'name', 'servos', 'description', 'command'):
         if k not in meta:
             raise SystemExit(f"policy.yaml is missing '{k}' (see AGENTS.md)")
     if not meta['repo'].endswith(f"-{meta['owner']}"):
-        raise SystemExit(f"repo {meta['repo']} must end with -{meta['owner']} (<org>/microduck-<robot>-<family>-<owner>)")
+        raise SystemExit(f"repo {meta['repo']} must end with -{meta['owner']} (one repo per person: <org>/<name>-<owner>)")
     env = load_cfg(run_dir / 'params/env.yaml')
     agent = load_cfg(run_dir / 'params/agent.yaml')
     warnings = []
@@ -293,8 +301,8 @@ def build(*, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: dict,
     joint_order = meta.get('joint_order') or list(home)
     act = plant['robot']['actuators'][0]
     manifest = {
-        'schema_version': 2, 'model_api': 1, 'obs_len': meta.get('obs_len', 61), 'action_len': len(joint_order),
-        'robot': {'model': 'microduck', 'hw_rev': 1, 'servos': meta['servos'],
+        'schema_version': 2, 'model_api': 1, 'obs_len': obs_len(onnx), 'action_len': len(joint_order),
+        'robot': {'model': cfg.robot, 'hw_rev': 1, 'servos': meta['servos'],
                   'control_hz': plant['robot']['control']['hz']},
         'name': meta['name'], 'kind': meta.get('kind', 'perpetual'), 'slot': meta.get('slot'),
         'entry_pose': meta.get('entry_pose', 'standing'), 'description': meta['description'],

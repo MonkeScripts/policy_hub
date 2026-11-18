@@ -55,11 +55,11 @@ class PlantError(ValueError):
     pass
 
 
-def sanity(d: dict) -> list[str]:
+def sanity(d: dict, mass_g: tuple[float, float] | None = None) -> list[str]:
     """Implausible values: errors. These catch typos in a training repo, not model mistakes."""
     r, e = d['robot'], []
-    if not 300 <= r['total_mass_g'] <= 2000:
-        e.append(f"total mass {r['total_mass_g']} g is outside 300-2000 g")
+    if mass_g and not mass_g[0] <= r['total_mass_g'] <= mass_g[1]:
+        e.append(f"total mass {r['total_mass_g']} g is outside {mass_g[0]}-{mass_g[1]} g (mass_g in policyhub.yaml)")
     for a in r['actuators']:
         if not (a.get('kp_fw') or 0) > 0:
             e.append(f"kp_fw {a.get('kp_fw')} must be > 0")
@@ -77,7 +77,8 @@ def sanity(d: dict) -> list[str]:
     return e
 
 
-def extract(task: str, notes_path: str | None = None, needs_prone: bool = False) -> dict:
+def extract(task: str, notes_path: str | None = None, needs_prone: bool = False,
+            mass_g: tuple[float, float] | None = None) -> dict:
     from policyhub import contract
     from policyhub.bake import build, colliders
 
@@ -125,7 +126,7 @@ def extract(task: str, notes_path: str | None = None, needs_prone: bool = False)
     if unnamed:
         d['warnings'].append(f"{len(unnamed)} geoms collide that the collision config does not name "
                              f"(kept from the XML): {', '.join(c['geom'] or c['body'] for c in unnamed)}")
-    errors = sanity(d)
+    errors = sanity(d, mass_g)
     if errors:
         raise PlantError(f"task {task}: implausible plant values:\n  " + '\n  '.join(errors))
     return d

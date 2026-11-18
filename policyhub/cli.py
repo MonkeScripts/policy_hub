@@ -17,6 +17,8 @@ def main() -> None:
     ap.add_argument('--import', dest='imports', action='append', default=[], metavar='MODULE',
                     help='import a module that registers tasks before looking them up (repeatable), '
                          "for training code that registers on import instead of through mjlab's entry point")
+    ap.add_argument('--config', type=Path, default=Path('policyhub.yaml'),
+                    help='which robot this repo trains (default ./policyhub.yaml)')
     sub = ap.add_subparsers(dest='cmd', required=True)
 
     e = sub.add_parser('eval', help="run a family's eval on an ONNX in a task's plant")
@@ -30,7 +32,8 @@ def main() -> None:
     c = sub.add_parser('check', help='contract + plant sanity for a task, in seconds (run first)')
     c.add_argument('--task', required=True)
     c.add_argument('--family', help="also check what this family's eval needs")
-    c.add_argument('--onnx', type=Path, help='also check an exported policy against the firmware contract')
+    c.add_argument('--onnx', type=Path, help='also check an exported policy against the firmware contract '
+                                             '(microduck_firmware in policyhub.yaml)')
 
     b = sub.add_parser('bake', help='write robot.xml + assets/: the robot as the task simulates it')
     b.add_argument('--task', required=True)
@@ -71,16 +74,20 @@ def main() -> None:
         from policyhub import families
         print('\n'.join(families.names()))
     elif a.cmd == 'check':
-        from policyhub import families
+        from policyhub import config, families
         from policyhub.bake import table
         from policyhub.plant import extract
-        d = extract(a.task, needs_prone=bool(a.family) and getattr(families.load(a.family), 'NEEDS_PRONE', False))
+        cfg = config.load(a.config)
+        d = extract(a.task, needs_prone=bool(a.family) and getattr(families.load(a.family), 'NEEDS_PRONE', False),
+                    mass_g=cfg.mass_g)
         print(f"contract OK, plant_hash {d['plant_hash']}, {d['robot']['total_mass_g']} g")
         print(table(d['task_modelling']['collision_geoms']))
         for w in d.get('warnings', []):
             print('warning:', w)
         if a.onnx:
-            from policyhub.contract import check_onnx
+            if not cfg.microduck_firmware:
+                raise SystemExit('--onnx: no firmware contract configured (microduck_firmware in policyhub.yaml)')
+            from policyhub.microduck import check_onnx
             check_onnx(a.onnx, d['robot']['joints']['home_rad'])
             print(f'{a.onnx}: firmware contract OK')
     elif a.cmd == 'bake':
@@ -106,17 +113,21 @@ def main() -> None:
         print(json.dumps(res['headline'], indent=1))
         print(f"wrote {a.out} in {res['runtime_s']} s")
     elif a.cmd == 'plant':
+        from policyhub import config
         from policyhub.plant import extract
-        d = extract(a.task, a.notes)
+        d = extract(a.task, a.notes, mass_g=config.load(a.config).mass_g)
         Path(a.out).write_text(json.dumps(d, indent=1) + '\n')
         print(f"plant_hash {d['plant_hash']} -> {a.out}")
     elif a.cmd == 'package':
+        from policyhub import config
         from policyhub.package import build
         from policyhub.plant import extract
+        cfg = config.load(a.config)
         ev = json.loads(a.eval.read_text())
         meta = yaml.safe_load(a.meta.read_text())
-        out = build(onnx=a.onnx, run_dir=a.run_dir, eval_res=ev, meta=meta,
-                    plant=extract(ev['task'], a.plant_notes), out=a.out, replay=a.replay, checkpoint=a.checkpoint)
+        out = build(cfg=cfg, onnx=a.onnx, run_dir=a.run_dir, eval_res=ev, meta=meta,
+                    plant=extract(ev['task'], a.plant_notes, mass_g=cfg.mass_g), out=a.out, replay=a.replay,
+                    checkpoint=a.checkpoint)
         print('wrote', out, ':', ', '.join(sorted(p.name for p in out.iterdir())))
         for w in json.loads((out / 'training.json').read_text()).get('warnings', []):
             print('warning:', w)
