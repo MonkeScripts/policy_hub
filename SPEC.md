@@ -1,0 +1,83 @@
+# Microduck policy package, spec v2
+
+One package = one tagged revision of a Hub model repo. One repo per family per person, in the
+shared org: `duckyduck369/microduck-<robot>-<family>-<owner>`; a new version is a new commit +
+tag in the same repo, never a new repo.
+
+## Files
+
+| file | made by | contents |
+|---|---|---|
+| `policy.onnx` | the training repo's export | 61 obs -> 14 actions, normalizer baked in; graph and metadata (`joint_names`, `observation_names`, `action_scale`, `default_joint_pos`) as the firmware contract F1-F6 in AGENTS.md requires |
+| `manifest.json` | `duckhub package` | how to run it: Pollen's schema 2 + the fields below |
+| `plant.json` | `duckhub package` (read out of the task) | which robot |
+| `training.json` | `duckhub package`, from the run's `params/env.yaml` + `agent.yaml` | how it was trained |
+| `eval.json` | `duckhub eval <family>` | the family's metrics |
+| `README.md` | `duckhub package` | the Hub page; YAML header = tags + headline metrics (`model-index`) |
+| `robot.xml` | `duckhub package` (baked from the task) | the robot as the task simulated it: bodies, masses, inertias, joint ranges, contact flags, HOME keyframe, physics timestep. Not the servo model: actuators are plain torque motors here, BAM lives in `plant.json` |
+| `assets/` | `duckhub package` | the meshes `robot.xml` references, unchanged from the training repo |
+| `checkpoint.pt` | `duckhub package --checkpoint` | optional: the rsl_rl training checkpoint the ONNX was exported from (actor, critic, optimizer, iteration, step counter), so training can continue exactly where it stopped |
+| `replay.mp4` | `duckhub eval --replay` | the family's replay scenarios back to back, labelled, fixed camera; embedded in the card |
+| `runs/` | later | TensorBoard files (the Hub shows a Metrics tab) |
+
+## manifest.json (our fields; the robot daemon ignores unknown fields)
+
+- `family` - which ranking it belongs to (`velstand`, `walk`, `flamingo`, ...)
+- `plant {plant_hash, task}` - same hash = same robot
+- `gains {kp, kd}` - what the firmware must write
+- `joint_order`, `home` - default_joint_pos in policy joint order
+- `runtime_notes` - anything else the runtime must do (fall stop, supply, clamping)
+- `model {file, sha256}` - the baked robot (spec v2; absent in v1 packages: use your own model)
+- `owner` - the Hugging Face user who publishes to this repo; nobody else may
+- `robot.servos`, `command.twist|head|body` (what the inputs mean), `onnx_sha256`, `spec_version`, `repo`
+
+## plant.json
+
+- `plant_hash` over `robot`: body masses, joint ranges, HOME, servo model and parameters
+  (gains, supply, sag, floor, latency, PWM limit), control rate
+- `task_modelling` (not hashed): the task, its collision geometry (every geom of the compiled robot
+  that can touch something, `{geom, body, contype, conaffinity, named}`; unnamed geoms have `geom: null`),
+  `unnamed_colliders`, and contact randomization
+- `notes` (optional, not hashed): where the numbers came from
+
+## training.json
+
+- `task`, `run`, `iterations`, `position {checkpoint, iteration, env_steps}` (from the checkpoint the ONNX
+  came from), `lineage` (warm starts, newest first), `code {repo, commit, branch, dirty}`, `warnings`
+- `summary`: randomization, `rewards_initial`, `rewards_final` and `rewards_final_source` (the task's
+  curricula applied at `position.env_steps`, or the plan replayed if the task code changed since training),
+  `curriculum_final` (parameters of every curriculum-targeted event / termination / command at that point),
+  curriculum stages (in env steps), terminations, commands, PPO
+- `env`, `agent`: the complete configs (python tags become strings)
+
+## eval.json
+
+- `eval {family, version, seed, num_envs, conditions, ranking, hub}` - only the same family and version are
+  compared; `ranking` (per headline metric: `higher`, `lower` or `["closer", target]`) is what the Space ranks by
+- `task`, `onnx_sha256`
+- `headline` - the metrics the family ranks on (its `RANKING` says which way is better)
+- `metrics` - everything, by test; a metric a test cannot measure is `null`, never left out
+
+## Card header
+
+Topic tags are how the Hub (and the Space) find policies: `microduck-family-*` = same ranking,
+`microduck-plant-*` = same robot, `microduck-eval-*` = results that can be compared directly.
+Versions are git tags on the repo (`v1`, `v2`, ...), never topic tags.
+
+```yaml
+tags: [microduck, microduck-family-<family>, microduck-plant-<plant_hash>, microduck-eval-<family>-<version>,
+       robotics, reinforcement-learning]
+model-index:
+- name: <repo name>
+  results:
+  - task: {type: reinforcement-learning, name: <description>}
+    dataset: {name: "<family> eval v<version>", type: microduck-sim}
+    metrics: [{name, type, value}, ...]   # = eval.json headline
+```
+
+## Versions
+
+- v1: no `robot.xml`; `plant.json` collision geometry listed by name match only (it missed unnamed meshes).
+- v2: `robot.xml` + `assets/`, `manifest.model`; collision geometry from the compiled robot.
+  `plant_hash` is computed the same way, so v1 and v2 packages of one robot share it.
+- v2, later addition (optional, older v2 packages lack it): `checkpoint.pt`.
