@@ -76,6 +76,18 @@ def build(task: str, play: bool = False):
     return cfg, spec, spec.compile()
 
 
+def _pin_inertia(spec, ref) -> None:
+    """Give every body its compiled mass and inertia explicitly. The XML export does not keep how the
+    source computed them (inertiafromgeom, inertiagrouprange, geom masses), so a reload could differ."""
+    for i in range(1, ref.nbody):
+        b = spec.body(_name(ref, 'body', i))
+        if b is None:
+            raise BakeError(f"body {i} has no name: cannot pin its inertia")
+        b.explicitinertial = True
+        b.mass, b.ipos, b.iquat, b.inertia = ref.body_mass[i], ref.body_ipos[i], ref.body_iquat[i], ref.body_inertia[i]
+        b.fullinertia = [float('nan')] * 6  # unset: the principal inertia + iquat above replace it
+
+
 def bake(task: str, out: Path) -> dict:
     """Write out/robot.xml and out/assets/; return {file, sha256, colliders, n_meshes, assets_mb}."""
     import mujoco
@@ -84,6 +96,7 @@ def bake(task: str, out: Path) -> dict:
 
     cfg, spec, ref = build(task)
     robot = cfg.scene.entities['robot']
+    _pin_inertia(spec, ref)
     out = Path(out)
     export_spec(spec, out)  # writes scene.xml + assets/; copies in-memory assets only
 
