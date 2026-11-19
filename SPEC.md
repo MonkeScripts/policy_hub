@@ -43,7 +43,7 @@ tag in the same repo, never a new repo.
 ## training.json
 
 - `task`, `run`, `iterations`, `position {checkpoint, iteration, env_steps}` (from the checkpoint the ONNX
-  came from), `lineage` (warm starts, newest first), `code {repo, commit, branch, dirty}`, `warnings`
+  came from), `lineage` (warm starts, newest first), `code {repo, commit, branch, dirty}` (the commit the run trained on, from rsl_rl's `<run>/git/*.diff`; the checkout's HEAD if the run has none), `warnings`
 - `summary`: randomization, `rewards_initial`, `rewards_final` and `rewards_final_source` (the task's
   curricula applied at `position.env_steps`, or the plan replayed if the task code changed since training),
   `curriculum_final` (parameters of every curriculum-targeted event / termination / command at that point),

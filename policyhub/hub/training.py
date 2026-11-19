@@ -12,6 +12,7 @@ after training), the live result is not trusted and the plan is replayed instead
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import yaml
@@ -78,7 +79,15 @@ def summarize(env: dict, agent: dict, env_steps: int) -> dict:
     }
 
 
-def git_info(repo: Path) -> dict:
+def git_info(repo: Path, run_dir: Path) -> dict:
+    """The code the run trained on: rsl_rl's <run>/git/<repo>.diff, else the checkout's HEAD now."""
+    snaps = sorted((run_dir / 'git').glob('*.diff'))
+    snap = next((p for p in snaps if p.stem == repo.resolve().name), snaps[0] if len(snaps) == 1 else None)
+    if snap:
+        s = snap.read_text()
+        status, diff = s.split('--- git status ---\n', 1)[1].split('--- git diff ---\n', 1)
+        branch = re.search(r'On branch (\S+)', status)
+        return {'commit': s.split('\n', 2)[1][:9], 'branch': branch[1] if branch else None, 'dirty': bool(diff.strip())}
     g = lambda *a: git(repo, *a)
     return {'commit': g('rev-parse', '--short=9', 'HEAD'), 'branch': g('branch', '--show-current'),
             'dirty': bool(g('status', '--porcelain', '--untracked-files=no'))}

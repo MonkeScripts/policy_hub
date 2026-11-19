@@ -14,8 +14,10 @@ Words used below:
 - **package**: the folder that becomes one tagged version (`v1`, `v2`, ...) of a Hub model repo.
 - **robot**: `robot` in `policyhub.yaml` at the training repo's root. It prefixes every tag, and
   each robot has its own ranking Space.
-- **org**: policies and the ranking Space live in the Hugging Face org named in `policyhub.yaml`;
-  ask an org admin to add you. Each person still publishes only to their own repos there.
+- **org**: policies and the ranking Space live in the Hugging Face org named in `policyhub.yaml`
+  (`org:`); ask an org admin to add you. Each person still publishes only to their own repos there.
+- **repo**: one per person per family, `<org>/<name>-<owner>`. The training repo's README fixes
+  `<name>` for each family (e.g. `microduck-hd1910-walk`), so everyone's walkers sit side by side.
 
 ## Setup
 
@@ -45,14 +47,19 @@ Run from the training repo root. Put every output under `logs/hub/` (git-ignored
    - Takes several minutes on a free GPU (velstand: about 8). Run it once per ONNX, not per question.
 4. **Decide whether it is worth publishing.** Compare the headline with the published version
    (step 6's dry run does this). If it is worse on any ranked metric, stop here and report which
-   metrics and by how much; do not package it.
+   metrics and by how much; do not package it. With no published version yet nothing compares, so
+   check it yourself: read the headline against the family's `README.md` (tracking near the
+   command, few falls) and the run's iteration count. A smoke run is never published: the tag is
+   used up for good.
 5. **Package**: write `policy.yaml` (below), then
    `uv run policyhub package --onnx <file> --checkpoint logs/rsl_rl/<exp>/<run>/model_<N>.pt --eval logs/hub/<name>.eval.json --run-dir logs/rsl_rl/<exp>/<run> --meta policy.yaml --replay logs/hub/<name>.replay.mp4 --out logs/hub/<repo-name>`
    - `--checkpoint` is the `.pt` the ONNX was exported from: it gives the training position, and the
-     card's final reward weights come from the task's own curricula applied there. Read every
-     `warning:` line (e.g. task code changed since training) and pass them on to the human.
+     card's final reward weights come from the task's own curricula applied there. The output ends
+     with `wrote ...` and then its `warning:` lines (e.g. task code changed since training): pass
+     every one on to the human.
 6. **Dry run**: `uv run policyhub publish logs/hub/<repo-name> --tag vN`
-   - Prints the comparison with the published version, any plant change, warnings, and the file list.
+   - Prints how far the policy trained, the comparison with the published version, any plant
+     change, warnings, and the file list. It reads the Hub but needs no login.
    - Show this output to the human, unedited.
 7. **Publish** only when the human says so for this package: add `--yes`.
    Add `--plant-changed` only if the human has read the plant diff and confirmed it,
@@ -68,7 +75,7 @@ Run from the training repo root. Put every output under `logs/hub/` (git-ignored
 - Never hand-edit `eval.json`, `plant.json` or `training.json`. Re-run the command instead.
 - Never put tokens, private hostnames or private repo URLs in `policy.yaml` or a card.
 - Policies live in the shared org: one Hub repo per family per person, `<org>/<name>-<owner>`
-  (e.g. `<org>/<robot>-velstand-<owner>`).
+  with the `<name>` the training repo's README gives.
   Only ever publish to your own repo (`publish` refuses another owner's). Never create a second repo
   for a new version; never move or reuse a tag (`publish` refuses an existing tag).
 
@@ -97,23 +104,24 @@ always typos in the training repo: find and fix the source, do not work around t
 
 ## policy.yaml (the only hand-written file per package)
 
-Example:
+Put it next to the outputs (`logs/hub/policy.yaml`, git-ignored). Example, for a velstand policy:
 
 ```yaml
-repo: duckyduck369/microduck-hd1910-velstand-djbob   # <org>/<name>-<owner>
+# required
+repo: duckyduck369/microduck-hd1910-velstand-djbob   # <org>/<name>-<owner>, org from policyhub.yaml
 owner: djbob                               # your Hugging Face user name
 description: "HD-1910 Microduck: walk (vx, vy, yaw) and get up after a fall"
-command:                                   # what each input means, in words
+command:                                   # each command the task has (env.yaml `commands`), in words
   twist: vx m/s, vy m/s, yaw rad/s
   head: neck pitch / head pitch / yaw / roll offsets
   body: body pose command in observation order
-runtime_notes:                             # anything the robot runtime must do differently
+# optional
+runtime_notes:                             # only what the runtime must do differently for THIS policy
   - fall stop OFF (the policy gets up by itself)
-  - trained supply 5.6-6.8 V (old 2S pack)
+lineage: [velstand_s2r3b it 7999, velstand_s2r3 it 2000]   # warm starts, newest first; omit if from scratch
+code_repo: <public URL of the training code, or "local only" for a private one>
+code_dir: .                                # records the commit the run trained on (from the run folder)
 # iterations: 8000                         # only if there is no --checkpoint (then a warning is printed)
-lineage: [velstand_s2r3b it 7999, velstand_s2r3 it 2000, s2r3e it 4500]   # newest first
-code_repo: <public URL of the training code, or "local only">
-code_dir: .                                # for the commit hash; use "." from the repo root
 ```
 
 Gains, HOME, joint order, supply and the rest come from the plant, not from this file.
@@ -137,7 +145,7 @@ Gains, HOME, joint order, supply and the rest come from the plant, not from this
 | Symptom | Cause / what to do |
 |---|---|
 | Eval is very slow | The GPU is shared: `nvidia-smi --query-compute-apps=pid,used_memory --format=csv`. Wait or tell the human; do not kill other users' jobs |
-| `[mdp] Patch ...` lines in the output | The training repo prints on import; harmless. Commands write JSON to files, never to stdout |
+| Hundreds of log lines (`[mdp] Patch ...`, warp, mjlab tables) | The training repo and simulator print on load; harmless. What matters is at the end: `eval`'s headline, `package`'s `warning:` lines |
 | `task observations do not match the ONNX input` | ONNX from a different task or an older observation layout (C7): re-export from the right checkpoint |
 | `eval.json was made from a different ONNX` | Re-run the eval on the file you are packaging |
 | Publish says "not comparable" | The published version used another eval version: re-run the current eval on the published ONNX first |

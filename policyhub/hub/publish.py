@@ -79,6 +79,8 @@ def publish(pkg: Path, tag: str, yes: bool = False, force: bool = False,
     repo = manifest['repo']
     old = current(repo)
     print(f"{repo}  new tag {tag}  (owner {manifest.get('owner')})")
+    pos = json.loads((pkg / 'training.json').read_text()).get('position') or {}
+    print(f"  trained to iteration {pos.get('iteration')} ({pos.get('env_steps')} env steps), {pos.get('checkpoint')}")
     old_manifest = current(repo, 'manifest.json')
     if old_manifest and old_manifest.get('owner', manifest.get('owner')) != manifest.get('owner'):
         raise SystemExit(f"stopped: {repo} belongs to {old_manifest.get('owner')}, this package to "

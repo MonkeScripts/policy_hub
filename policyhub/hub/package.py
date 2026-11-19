@@ -87,7 +87,7 @@ def build(*, cfg, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: 
         'task': eval_res['task'], 'run': agent['run_name'],
         'iterations': position['iteration'], 'position': position, 'lineage': meta.get('lineage', []),
         'warnings': warnings,
-        'code': {'repo': meta.get('code_repo'), **git_info(Path(meta['code_dir']))} if meta.get('code_dir') else {'repo': meta.get('code_repo')},
+        'code': {'repo': meta.get('code_repo'), **git_info(Path(meta['code_dir']), run_dir)} if meta.get('code_dir') else {'repo': meta.get('code_repo')},
         'summary': summary, 'env': env, 'agent': agent,
     }
     assert eval_res['onnx_sha256'] == manifest['onnx_sha256'], 'eval.json was made from a different ONNX'
