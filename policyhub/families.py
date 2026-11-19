@@ -15,14 +15,10 @@ def _root(cfg) -> Path:
     return cfg.families
 
 
-def names(cfg) -> list[str]:
-    return sorted(p.name for p in _root(cfg).iterdir() if (p / 'eval.py').is_file())
-
-
 def load(cfg, name: str):
     path = _root(cfg) / name / 'eval.py'
     if not path.is_file():
-        raise SystemExit(f"no family '{name}' in {_root(cfg)}; known: {', '.join(names(cfg))}")
+        raise SystemExit(f"no family '{name}': {path} does not exist")
     spec = importlib.util.spec_from_file_location(f"policyhub_family_{name}", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

@@ -18,7 +18,6 @@ tag in the same repo, never a new repo.
 | `assets/` | `policyhub package` | the meshes `robot.xml` references, unchanged from the training repo |
 | `checkpoint.pt` | `policyhub package --checkpoint` | optional: the rsl_rl training checkpoint the ONNX was exported from (actor, critic, optimizer, iteration, step counter), so training can continue exactly where it stopped |
 | `replay.mp4` | `policyhub eval --replay` | the family's replay scenarios back to back, labelled, fixed camera; embedded in the card |
-| `runs/` | later | TensorBoard files (the Hub shows a Metrics tab) |
 
 ## manifest.json
 
@@ -40,7 +39,6 @@ tag in the same repo, never a new repo.
 - `task_modelling` (not hashed): the task, its collision geometry (every geom of the compiled robot
   that can touch something, `{geom, body, contype, conaffinity, named}`; unnamed geoms have `geom: null`),
   `unnamed_colliders`, and contact randomization
-- `notes` (optional, not hashed): where the numbers came from
 
 ## training.json
 
@@ -85,4 +83,5 @@ model-index:
   `plant_hash` is computed the same way, so v1 and v2 packages of one robot share it.
 - v2, later addition (optional, older v2 packages lack it): `checkpoint.pt`.
 - v3: `manifest.json` keeps only the fields above; `robot` is the robot name (was `robot.model`),
-  `control_hz` moved up from `robot.control_hz`.
+  `control_hz` moved up from `robot.control_hz`. `training.json` `summary` no longer repeats the plant
+  (it is in `plant.json`).

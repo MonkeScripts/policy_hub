@@ -2,8 +2,7 @@
 
 Nothing is written by hand: the description comes from what the training repo's task actually
 builds (compiled model masses and collision geometry, servo model and gains, supply, latency,
-HOME, joint ranges, friction randomization, control rate). An optional notes file next to the
-task adds where the numbers came from; notes do not change `plant_hash`.
+HOME, joint ranges, friction randomization, control rate).
 
 Collision geometry is read from the compiled robot after mjlab's edits (policyhub.bake), not matched
 by name: onshape-to-robot's collision meshes are unnamed, so a name filter neither removes them in
@@ -23,8 +22,6 @@ import hashlib
 import json
 import re
 from pathlib import Path
-
-import yaml
 
 from policyhub.policy import sha256
 
@@ -107,7 +104,7 @@ def _hash(robot_facts: dict) -> str:
     return hashlib.sha256(json.dumps(robot_facts, sort_keys=True).encode()).hexdigest()[:16]
 
 
-def extract(task: str, notes_path: str | None = None, needs_prone: bool = False,
+def extract(task: str, needs_prone: bool = False,
             mass_g: tuple[float, float] | None = None) -> dict:
     """The plant of the train config (the robot the policy learned on). Raises if the play config,
     which evals run, builds a different robot."""
@@ -134,8 +131,6 @@ def extract(task: str, notes_path: str | None = None, needs_prone: bool = False,
          'task_modelling': {'task': task, 'collision_geoms': collision_geoms, 'n_geoms': m.ngeom,
                             'unnamed_colliders': len(unnamed),
                             'contact_randomization': randomization}}
-    if notes_path:
-        d['notes'] = yaml.safe_load(Path(notes_path).read_text())
     if not randomization:
         d['warnings'] = ['no friction/torsion randomization found (contract C9)']
     d.setdefault('warnings', []).extend(contract.warn(cfg))

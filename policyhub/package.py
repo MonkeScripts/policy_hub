@@ -73,22 +73,10 @@ def final_weights(env: dict, env_steps: int) -> dict:
 
 def summarize(env: dict, agent: dict, env_steps: int) -> dict:
     """The parts people compare. Everything else stays in env/agent below."""
-    robot = env['scene']['entities']['robot']
-    act = robot['articulation']['actuators'][0]
     return {
         'env_steps': env_steps,
         'rewards_final': final_weights(env, env_steps),
         'rewards_final_source': 'replayed from the curriculum plan',
-        'plant': {
-            'spec_fn': robot.get('spec_fn'),
-            'actuator_params': Path(act.get('json_path') or '').name or None,
-            'kp': act.get('kp_fw'), 'kd': act.get('kd_fw'), 'max_pwm': act.get('max_pwm'),
-            'vin_range': act.get('vin_range'), 'vin_drop_gain_range': act.get('vin_drop_gain_range'),
-            'vin_min': act.get('vin_min'),
-            'delay_steps': [act.get('delay_min_lag'), act.get('delay_max_lag')],
-            'home': robot['init_state']['joint_pos'],
-            'control_hz': round(1.0 / (env['sim']['mujoco']['timestep'] * env['decimation'])),
-        },
         'randomization': {k: v.get('params') for k, v in (env.get('events') or {}).items()},
         'rewards_initial': {k: v['weight'] for k, v in (env.get('rewards') or {}).items()},
         'terminations': sorted((env.get('terminations') or {}).keys()),
@@ -174,17 +162,6 @@ def training_sections(t: dict) -> list[str]:
     return lines
 
 
-def acceptance_section(e: dict) -> list[str]:
-    """The family's acceptance gates, when its eval records them (metrics.acceptance)."""
-    acc = (e.get('metrics') or {}).get('acceptance')
-    if not acc:
-        return []
-    verdict = 'ACCEPTED: passes every gate.' if acc['accepted'] else 'CANDIDATE: fails at least one gate below.'
-    rows = [f"| {k} | {g['rule']} | {g['value']} | {'pass' if g['pass'] else ('fail' if g['pass'] is False else '-')} |"
-            for k, g in acc['gates'].items()]
-    return ['### Acceptance', '', f'**{verdict}**', '', '| gate | rule | value | |', '|---|---|---|---|', *rows, '']
-
-
 def card(m: dict, t: dict, e: dict, plant: dict, has_replay: bool = False, has_checkpoint: bool = False) -> str:
     robot = m['robot']
     rows = list(e['headline'].items())
@@ -224,7 +201,6 @@ def card(m: dict, t: dict, e: dict, plant: dict, has_replay: bool = False, has_c
         f"Family `{ev['family']}` eval v{ev['version']}, {ev['num_envs']} robots, seed {ev['seed']}. "
         'Full results and test conditions in `eval.json`.', '',
         '| metric | value |', '|---|---|', *[f"| {k} | {v} |" for k, v in rows], '',
-        *acceptance_section(e),
         *(['## Replay', '', "The family's replay scenarios back to back, fixed camera, real time.", '',
            f"<video src=\"https://huggingface.co/{m['repo']}/resolve/main/replay.mp4\" controls muted loop width=\"640\"></video>", '']
           if has_replay else []),

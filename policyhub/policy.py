@@ -25,7 +25,6 @@ class OnnxPolicy:
         self.s = ort.InferenceSession(m.SerializeToString(), providers=['CPUExecutionProvider'])
         self.inp, self.out = self.s.get_inputs()[0].name, self.s.get_outputs()[0].name
         self.obs_len = self.s.get_inputs()[0].shape[1]
-        self.action_len = self.s.get_outputs()[0].shape[1]
 
     def __call__(self, obs: torch.Tensor) -> torch.Tensor:
         a = self.s.run([self.out], {self.inp: obs.detach().cpu().numpy().astype(np.float32)})[0]
