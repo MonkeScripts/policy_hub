@@ -40,8 +40,8 @@ Then, from the training repo (AGENTS.md has the full workflow and rules):
 
 ```
 uv run policyhub space                                        # dry run; --yes creates/updates the robot's Space (once)
-uv run policyhub check --task <TASK> --family velstand        # contract, plant, what collides
-uv run policyhub bake --task <TASK> --out out/bake            # robot.xml + assets/, opens in any MuJoCo viewer
+uv run policyhub check --task <TASK> --family velstand        # contract, plant, what collides, robot.xml bakes
+                                                              # (--out out/bake keeps it for a MuJoCo viewer)
 uv run policyhub eval velstand --task <TASK> --onnx x.onnx --out eval.json
 uv run policyhub package --onnx x.onnx --checkpoint <run>/model_N.pt --eval eval.json --run-dir <run> \
     --meta policy.yaml --out out/<repo-name>

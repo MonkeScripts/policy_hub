@@ -1,4 +1,4 @@
-"""policyhub eval | check | bake | package | publish | space. Run from the training repo, inside its environment."""
+"""policyhub check | eval | package | publish | space. Run from the training repo, inside its environment."""
 
 from __future__ import annotations
 
@@ -28,13 +28,10 @@ def main() -> None:
     e.add_argument('--out', default='eval.json')
     e.add_argument('--replay', help="also record the family's replay video to this .mp4")
 
-    c = sub.add_parser('check', help='contract + plant sanity for a task, in seconds (run first)')
+    c = sub.add_parser('check', help='contract, plant, collisions and the baked robot.xml for a task, in seconds (run first)')
     c.add_argument('--task', required=True)
     c.add_argument('--family', help="also check what this family's eval needs")
-
-    b = sub.add_parser('bake', help='write robot.xml + assets/: the robot as the task simulates it')
-    b.add_argument('--task', required=True)
-    b.add_argument('--out', required=True, type=Path)
+    c.add_argument('--out', type=Path, help='keep the baked robot.xml + assets/ here, to open in a MuJoCo viewer')
 
     k = sub.add_parser('package', help='build the Hub package folder')
     k.add_argument('--onnx', required=True, type=Path)
@@ -62,9 +59,11 @@ def main() -> None:
             importlib.import_module(mod)
 
     if a.cmd == 'check':
+        import tempfile
+
         from policyhub import config
         from policyhub.eval import families
-        from policyhub.robot.bake import table
+        from policyhub.robot.bake import bake, table
         from policyhub.robot.plant import extract
         cfg = config.load(a.config)
         d = extract(a.task, needs_prone=bool(a.family) and getattr(families.load(cfg, a.family), 'NEEDS_PRONE', False),
@@ -73,11 +72,10 @@ def main() -> None:
         print(table(d['task_modelling']['collision_geoms']))
         for w in d.get('warnings', []):
             print('warning:', w)
-    elif a.cmd == 'bake':
-        from policyhub.robot.bake import bake, table
-        r = bake(a.task, a.out)
-        print(table(r['colliders']))
-        print(f"wrote {a.out / r['file']} + {r['n_meshes']} meshes ({r['assets_mb']} MB); reload matches the training model")
+        with tempfile.TemporaryDirectory() as tmp:  # the same bake package does, so a failure shows here, not after an eval
+            r = bake(a.task, a.out or Path(tmp))
+        print(f"robot.xml + {r['n_meshes']} meshes ({r['assets_mb']} MB) reload identical to the training model"
+              + (f": {a.out / r['file']}" if a.out else ''))
     elif a.cmd == 'eval':
         from policyhub import config
         from policyhub.eval import families

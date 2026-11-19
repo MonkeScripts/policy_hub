@@ -37,8 +37,9 @@ Run from the training repo root. Put every output under `logs/hub/` (git-ignored
      Geoms marked `NO (kept from the XML)` collide although the task's collision config does not name
      them (onshape-to-robot's collision meshes are unnamed, so name filters miss them). Tell the human
      when the list is not what the task intends (e.g. a head that should not touch the floor).
-   - `uv run policyhub bake --task <TASK> --out logs/hub/bake` writes the same robot as `robot.xml` +
-     `assets/` to open in a viewer (`python -m mujoco.viewer --mjcf logs/hub/bake/robot.xml`).
+   - `check` also bakes the robot as `package` will (one `robot.xml` + `assets/`, reloaded and compared).
+     Add `--out logs/hub/bake` to keep it and open it in a viewer
+     (`python -m mujoco.viewer --mjcf logs/hub/bake/robot.xml`).
 2. **Export the ONNX** the usual way (the training repo's export, with the normalizer baked in).
 3. **Evaluate**: `uv run policyhub eval <family> --task <TASK> --onnx <file> --out logs/hub/<name>.eval.json --replay logs/hub/<name>.replay.mp4`
    - Takes several minutes on a free GPU (velstand: about 8). Run it once per ONNX, not per question.
