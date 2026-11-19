@@ -25,7 +25,7 @@ Words used below:
 (see README.md).
 The robot's ranking Space is set up once with `policyhub space --upload`, by the human (it writes to the
 org); re-run it after changing `title`, `emoji` or the org.
-`huggingface-cli login` is only needed for publishing; the human does it. After pulling a newer hub,
+`hf auth login` is only needed for publishing; the human does it. After pulling a newer hub,
 re-run evals before comparing with older results if any family `VERSION` changed.
 
 ## Workflow
