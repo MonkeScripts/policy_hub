@@ -39,7 +39,7 @@ Run from the training repo root. Put every output under `logs/hub/` (git-ignored
      when the list is not what the task intends (e.g. a head that should not touch the floor).
    - `uv run policyhub bake --task <TASK> --out logs/hub/bake` writes the same robot as `robot.xml` +
      `assets/` to open in a viewer (`python -m mujoco.viewer --mjcf logs/hub/bake/robot.xml`).
-2. **Export the ONNX** the usual way (`scripts/export.py`, which bakes in the normalizer).
+2. **Export the ONNX** the usual way (the training repo's export, with the normalizer baked in).
 3. **Evaluate**: `uv run policyhub eval <family> --task <TASK> --onnx <file> --out logs/hub/<name>.eval.json --replay logs/hub/<name>.replay.mp4`
    - Takes several minutes on a free GPU (velstand: about 8). Run it once per ONNX, not per question.
 4. **Decide whether it is worth publishing.** Compare the headline with the published version
@@ -94,34 +94,13 @@ train config (what the policy learned on), and rejects implausible plant values 
 floor above the supply range, latency min > max, HOME outside its joint range). Those are almost
 always typos in the training repo: find and fix the source, do not work around them.
 
-## The Microduck firmware contract (only with `microduck_firmware: true` in policyhub.yaml)
-
-`package` and `check --onnx` enforce this on policy.onnx. The robot runs a policy only after microduck_runtime's `tools/export_policy.py` converts it, and that
-converter refuses anything else. `policyhub package` refuses the same files, so nothing on the Hub fails there.
-
-| Rule | Requirement |
-|---|---|
-| F1 | Graph is exactly Sub, Div (the baked normalizer), then 4 Gemm with Elu between |
-| F2 | 61 -> 512 -> 256 -> 128 -> 14, Gemm transB=1 alpha=beta=1, Elu alpha 1, finite float32, nonzero std |
-| F3 | metadata `observation_names` = `base_ang_vel,projected_gravity,joint_pos,joint_vel,actions,command,head_command,body_command` |
-| F4 | metadata `action_scale` = 1 |
-| F5 | metadata `joint_names` in the firmware's order: left hip_yaw, hip_roll, hip_pitch, knee, ankle, neck_pitch, head_pitch, head_yaw, head_roll, then right hip_yaw .. ankle |
-| F6 | metadata `default_joint_pos` is 14 finite values within 1 rad (the firmware's rule: each policy carries its own HOME), and matches the task's HOME within 1e-3 rad (policyhub's addition) |
-
-The template's `scripts/export.py` writes all of this. Changing the network size, the observations or
-the exporter breaks it: the firmware would need a matching change first.
-
 ## policy.yaml (the only hand-written file per package)
 
-Example for a Microduck:
+Example:
 
 ```yaml
 repo: duckyduck369/microduck-hd1910-velstand-djbob   # <org>/<name>-<owner>
 owner: djbob                               # your Hugging Face user name
-name: hd1910-velstand                      # what a client asks the robot for
-servos: hd1910                             # hd1910, xl330, ...
-slot: walk                                 # robot slot it is for (walk, stand, ...), or omit
-entry_pose: standing or fallen
 description: "HD-1910 Microduck: walk (vx, vy, yaw) and get up after a fall"
 command:                                   # what each input means, in words
   twist: vx m/s, vy m/s, yaw rad/s

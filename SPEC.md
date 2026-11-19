@@ -1,4 +1,4 @@
-# Policy package, spec v2
+# Policy package, spec v3
 
 One package = one tagged revision of a Hub model repo. One repo per family per person, in the
 shared org: `<org>/<name>-<owner>`; a new version is a new commit +
@@ -8,8 +8,8 @@ tag in the same repo, never a new repo.
 
 | file | made by | contents |
 |---|---|---|
-| `policy.onnx` | the training repo's export | normalizer baked in; metadata `joint_names`, `observation_names`, `action_scale`, `default_joint_pos`; for a Microduck also the firmware contract F1-F6 in AGENTS.md |
-| `manifest.json` | `policyhub package` | how to run it: Pollen's schema 2 + the fields below |
+| `policy.onnx` | the training repo's export | normalizer baked in; metadata `joint_names`, `observation_names`, `action_scale`, `default_joint_pos` |
+| `manifest.json` | `policyhub package` | how to run it: the fields below |
 | `plant.json` | `policyhub package` (read out of the task) | which robot |
 | `training.json` | `policyhub package`, from the run's `params/env.yaml` + `agent.yaml` | how it was trained |
 | `eval.json` | `policyhub eval <family>` | the family's metrics |
@@ -20,16 +20,18 @@ tag in the same repo, never a new repo.
 | `replay.mp4` | `policyhub eval --replay` | the family's replay scenarios back to back, labelled, fixed camera; embedded in the card |
 | `runs/` | later | TensorBoard files (the Hub shows a Metrics tab) |
 
-## manifest.json (our fields; the robot daemon ignores unknown fields)
+## manifest.json
 
-- `family` - which ranking it belongs to (`velstand`, `walk`, `flamingo`, ...)
+- `robot` - `robot` in policyhub.yaml
+- `family` - which ranking it belongs to
+- `owner` - the Hugging Face user who publishes to this repo; nobody else may
+- `description`, `command` (what each input means, from policy.yaml)
 - `plant {plant_hash, task}` - same hash = same robot
-- `gains {kp, kd}` - what the firmware must write
+- `gains {kp, kd}` - the servo gains to write at start; `control_hz`
 - `joint_order`, `home` - default_joint_pos in policy joint order
 - `runtime_notes` - anything else the runtime must do (fall stop, supply, clamping)
-- `model {file, sha256}` - the baked robot (spec v2; absent in v1 packages: use your own model)
-- `owner` - the Hugging Face user who publishes to this repo; nobody else may
-- `robot.servos`, `command.twist|head|body` (what the inputs mean), `onnx_sha256`, `spec_version`, `repo`
+- `model {file, sha256}` - the baked robot (spec v2 on; absent in v1 packages: use your own model)
+- `onnx_sha256`, `spec_version`, `repo`
 
 ## plant.json
 
@@ -82,3 +84,5 @@ model-index:
 - v2: `robot.xml` + `assets/`, `manifest.model`; collision geometry from the compiled robot.
   `plant_hash` is computed the same way, so v1 and v2 packages of one robot share it.
 - v2, later addition (optional, older v2 packages lack it): `checkpoint.pt`.
+- v3: `manifest.json` keeps only the fields above; `robot` is the robot name (was `robot.model`),
+  `control_hz` moved up from `robot.control_hz`.

@@ -32,8 +32,6 @@ def main() -> None:
     c = sub.add_parser('check', help='contract + plant sanity for a task, in seconds (run first)')
     c.add_argument('--task', required=True)
     c.add_argument('--family', help="also check what this family's eval needs")
-    c.add_argument('--onnx', type=Path, help='also check an exported policy against the firmware contract '
-                                             '(microduck_firmware in policyhub.yaml)')
 
     b = sub.add_parser('bake', help='write robot.xml + assets/: the robot as the task simulates it')
     b.add_argument('--task', required=True)
@@ -87,12 +85,6 @@ def main() -> None:
         print(table(d['task_modelling']['collision_geoms']))
         for w in d.get('warnings', []):
             print('warning:', w)
-        if a.onnx:
-            if not cfg.microduck_firmware:
-                raise SystemExit('--onnx: no firmware contract configured (microduck_firmware in policyhub.yaml)')
-            from policyhub.microduck import check_onnx
-            check_onnx(a.onnx, d['robot']['joints']['home_rad'])
-            print(f'{a.onnx}: firmware contract OK')
     elif a.cmd == 'bake':
         from policyhub.bake import bake, table
         r = bake(a.task, a.out)

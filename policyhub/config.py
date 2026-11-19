@@ -7,7 +7,6 @@
     emoji: 🦆                   # optional: the Space's icon
     families: families          # this robot's evals: <families>/<name>/eval.py, relative to this file
     mass_g: [300, 2000]         # optional: plausible total mass, catches typos in the task
-    microduck_firmware: true    # optional: refuse ONNX files the Microduck firmware cannot run (F1-F6)
 """
 
 from __future__ import annotations
@@ -28,7 +27,6 @@ class Config:
     emoji: str = '🤖'
     families: Path | None = None
     mass_g: tuple[float, float] | None = None
-    microduck_firmware: bool = False
 
 
 def load(path: Path) -> Config:

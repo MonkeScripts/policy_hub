@@ -13,7 +13,7 @@ import yaml
 from policyhub.policy import sha256
 from policyhub.version import git
 
-SPEC_VERSION = 2
+SPEC_VERSION = 3
 
 
 # -- params/*.yaml are written with python tags; read them as plain data ------------------------
@@ -186,7 +186,7 @@ def acceptance_section(e: dict) -> list[str]:
 
 
 def card(m: dict, t: dict, e: dict, plant: dict, has_replay: bool = False, has_checkpoint: bool = False) -> str:
-    robot = m['robot']['model']
+    robot = m['robot']
     rows = list(e['headline'].items())
     ev = e['eval']
     meta = {
@@ -208,12 +208,10 @@ def card(m: dict, t: dict, e: dict, plant: dict, has_replay: bool = False, has_c
         '---', yaml.safe_dump(meta, sort_keys=False).strip(), '---', '',
         f"# {m['repo'].split('/')[1]}", '', m['description'], '',
         '## Run it', '',
-        f"- Servos {m['robot']['servos']}, Kp {m['gains']['kp']} / Kd {m['gains']['kd']} written at start, "
-        f"{m['robot']['control_hz']} Hz.",
+        f"- Kp {m['gains']['kp']} / Kd {m['gains']['kd']} written at start, {m['control_hz']} Hz.",
         f"- HOME (default_joint_pos, policy joint order): `{m['home']}`",
-        f"- Twist: {m['command']['twist']}",
-        *[f"- {n}" for n in m['runtime_notes']],
-        f"- `robotctl policy load {m['slot']} {m['repo']}`" if m.get('slot') else '', '',
+        *[f"- Command `{k}`: {v}" for k, v in m['command'].items()],
+        *[f"- {n}" for n in m['runtime_notes']], '',
         '## Plant', '',
         f"Plant hash `{m['plant']['plant_hash']}`, from task `{m['plant']['task']}`: {r['total_mass_g']} g, "
         f"servo model `{a.get('json_path') or (str(a.get('motor_name')) + ' ' + str(a.get('model')))}`, supply {a.get('vin_range') or a.get('vin')} V (sag {a.get('vin_drop_gain_range')} V/N·m, "
@@ -244,20 +242,11 @@ def card(m: dict, t: dict, e: dict, plant: dict, has_replay: bool = False, has_c
     return '\n'.join(lines)
 
 
-def obs_len(onnx_path: Path) -> int:
-    import onnx
-
-    return onnx.load(str(onnx_path)).graph.input[0].type.tensor_type.shape.dim[-1].dim_value
-
-
 def build(*, cfg, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: dict, out: Path,
           replay: Path | None = None, checkpoint: Path | None = None) -> Path:
     from policyhub.training import checkpoint_position, live_final, unknown_curricula
 
-    if cfg.microduck_firmware:
-        from policyhub.microduck import check_onnx
-        check_onnx(onnx, plant['robot']['joints']['home_rad'])
-    for k in ('repo', 'owner', 'name', 'servos', 'description', 'command'):
+    for k in ('repo', 'owner', 'description', 'command'):
         if k not in meta:
             raise SystemExit(f"policy.yaml is missing '{k}' (see AGENTS.md)")
     if not meta['repo'].endswith(f"-{meta['owner']}"):
@@ -301,15 +290,9 @@ def build(*, cfg, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: 
     joint_order = meta.get('joint_order') or list(home)
     act = plant['robot']['actuators'][0]
     manifest = {
-        'schema_version': 2, 'model_api': 1, 'obs_len': obs_len(onnx), 'action_len': len(joint_order),
-        'robot': {'model': cfg.robot, 'hw_rev': 1, 'servos': meta['servos'],
-                  'control_hz': plant['robot']['control']['hz']},
-        'name': meta['name'], 'kind': meta.get('kind', 'perpetual'), 'slot': meta.get('slot'),
-        'entry_pose': meta.get('entry_pose', 'standing'), 'description': meta['description'],
-        'command': {'encoding': 'constant', 'idle': [0.0, 0.0, 0.0], **meta['command']},
-        'action_scale': meta.get('action_scale', 1.0),
-        # ours; the daemon ignores unknown fields (Pollen docs/policy-manifest.md)
-        'spec_version': SPEC_VERSION, 'repo': meta['repo'], 'owner': meta['owner'], 'family': family,
+        'spec_version': SPEC_VERSION, 'robot': cfg.robot, 'repo': meta['repo'], 'owner': meta['owner'],
+        'family': family, 'description': meta['description'], 'command': meta['command'],
+        'control_hz': plant['robot']['control']['hz'],
         'plant': {'plant_hash': plant['plant_hash'], 'task': plant['task_modelling']['task']},
         'gains': {'kp': act.get('kp_fw'), 'kd': act.get('kd_fw')},
         'joint_order': joint_order, 'home': [home[j] for j in joint_order],

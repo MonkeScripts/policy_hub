@@ -44,7 +44,7 @@ uv run policyhub publish out/<repo-name> --tag v1 --yes       # push + tag
 ```
 
 `policy.yaml` is the only hand-written file per package: repo (`<org>/<name>-<owner>`), owner,
-name, description, servos, what the command inputs mean, runtime notes, lineage.
+description, what the command inputs mean, runtime notes, lineage.
 
 ## Families
 

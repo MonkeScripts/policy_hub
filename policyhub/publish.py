@@ -114,6 +114,6 @@ def publish(pkg: Path, tag: str, yes: bool = False, force: bool = False, private
     api = HfApi()
     api.create_repo(repo, repo_type='model', private=private, exist_ok=True)
     info = api.upload_folder(repo_id=repo, folder_path=str(pkg),
-                             commit_message=f"{tag}: {manifest['name']} ({new['eval']['family']} eval v{new['eval']['version']})")
+                             commit_message=f"{tag}: {repo.split('/')[1]} ({new['eval']['family']} eval v{new['eval']['version']})")
     api.create_tag(repo, tag=tag, revision=info.oid)
     print(f"published https://huggingface.co/{repo}/tree/{tag}")
