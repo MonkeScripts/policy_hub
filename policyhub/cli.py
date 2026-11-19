@@ -36,18 +36,19 @@ def main() -> None:
     k = sub.add_parser('package', help='build the Hub package folder')
     k.add_argument('--onnx', required=True, type=Path)
     k.add_argument('--eval', required=True, type=Path, help='eval.json from `policyhub eval`')
-    k.add_argument('--run-dir', required=True, type=Path, help='the training run (with params/env.yaml, agent.yaml)')
-    k.add_argument('--meta', required=True, type=Path, help='policy.yaml: repo, owner, description, command, ...')
+    k.add_argument('--checkpoint', required=True, type=Path,
+                   help='the .pt the ONNX was exported from, inside its run folder (params/env.yaml, agent.yaml)')
+    k.add_argument('--policy-yaml', required=True, type=Path, help='policy.yaml: repo, owner, description, command, ...')
     k.add_argument('--replay', type=Path, help='replay.mp4 from `policyhub eval --replay`')
-    k.add_argument('--checkpoint', type=Path, help='the .pt the ONNX was exported from (training position)')
     k.add_argument('--out', required=True, type=Path)
 
     u = sub.add_parser('publish', help='compare with the published version; --upload creates the repo, uploads and tags')
     u.add_argument('package', type=Path)
-    u.add_argument('--tag', required=True)
+    u.add_argument('--tag', help='default: the next free vN')
     u.add_argument('--upload', action='store_true', help='create the repo, upload and tag (default: preview only)')
-    u.add_argument('--force', action='store_true', help='publish even if worse or not comparable')
-    u.add_argument('--plant-changed', action='store_true', help='accept a robot that differs from the published one')
+    u.add_argument('--allow-worse', action='store_true', help='publish although a ranked metric is worse than the published version')
+    u.add_argument('--allow-new-eval', action='store_true', help='publish although the published version used another eval version')
+    u.add_argument('--allow-plant-change', action='store_true', help='publish although the robot differs from the published one')
 
     sp = sub.add_parser('space', help="preview the robot's ranking Space; --upload creates or updates it")
     sp.add_argument('--upload', action='store_true', help='create or update the Space (default: preview only)')
@@ -98,10 +99,9 @@ def main() -> None:
         from policyhub.robot.plant import extract
         cfg = config.load(a.config)
         ev = json.loads(a.eval.read_text())
-        meta = yaml.safe_load(a.meta.read_text())
-        out = build(cfg=cfg, onnx=a.onnx, run_dir=a.run_dir, eval_res=ev, meta=meta,
-                    plant=extract(ev['task'], mass_g=cfg.mass_g), out=a.out, replay=a.replay,
-                    checkpoint=a.checkpoint)
+        meta = yaml.safe_load(a.policy_yaml.read_text())
+        out = build(cfg=cfg, onnx=a.onnx, checkpoint=a.checkpoint, eval_res=ev, meta=meta,
+                    plant=extract(ev['task'], mass_g=cfg.mass_g), out=a.out, replay=a.replay)
         print('wrote', out, ':', ', '.join(sorted(p.name for p in out.iterdir())))
         for w in json.loads((out / 'training.json').read_text()).get('warnings', []):
             print('warning:', w)
@@ -111,7 +111,8 @@ def main() -> None:
         publish_space(config.load(a.config), upload=a.upload)
     elif a.cmd == 'publish':
         from policyhub.hub.publish import publish
-        publish(a.package, a.tag, upload=a.upload, force=a.force, plant_changed=a.plant_changed)
+        publish(a.package, a.tag, upload=a.upload, allow_worse=a.allow_worse, allow_new_eval=a.allow_new_eval,
+                allow_plant_change=a.allow_plant_change)
 
 
 if __name__ == '__main__':

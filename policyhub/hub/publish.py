@@ -7,6 +7,7 @@ repo, metric by metric, using the family's RANKING. Different eval versions are 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from huggingface_hub import HfApi, hf_hub_download
@@ -72,12 +73,14 @@ def plant_diff(new: dict, old: dict) -> list[str]:
     return [f"  {k}: {a.get(k)} -> {b.get(k)}" for k in sorted(a.keys() | b.keys()) if a.get(k) != b.get(k)]
 
 
-def publish(pkg: Path, tag: str, upload: bool = False, force: bool = False,
-            plant_changed: bool = False) -> None:
+def publish(pkg: Path, tag: str | None = None, upload: bool = False, allow_worse: bool = False,
+            allow_new_eval: bool = False, allow_plant_change: bool = False) -> None:
     manifest = json.loads((pkg / 'manifest.json').read_text())
     new = json.loads((pkg / 'eval.json').read_text())
     repo = manifest['repo']
     old = current(repo)
+    tags = _tags(repo)
+    tag = tag or f"v{max((int(t[1:]) for t in tags if re.fullmatch(r'v\d+', t)), default=0) + 1}"
     print(f"{repo}  new tag {tag}  (owner {manifest.get('owner')})")
     pos = json.loads((pkg / 'training.json').read_text()).get('position') or {}
     print(f"  trained to iteration {pos.get('iteration')} ({pos.get('env_steps')} env steps), {pos.get('checkpoint')}")
@@ -85,27 +88,27 @@ def publish(pkg: Path, tag: str, upload: bool = False, force: bool = False,
     if old_manifest and old_manifest.get('owner', manifest.get('owner')) != manifest.get('owner'):
         raise SystemExit(f"stopped: {repo} belongs to {old_manifest.get('owner')}, this package to "
                          f"{manifest.get('owner')}. Publish to your own repo.")
-    if tag in _tags(repo):
+    if tag in tags:
         raise SystemExit(f"stopped: {repo} already has tag {tag}; tags are never moved or reused")
     if old is None:
         print('  no published version yet: this becomes the first')
     elif old['eval']['version'] != new['eval']['version'] or old['eval']['family'] != new['eval']['family']:
         print(f"  published eval is {old['eval']['family']} v{old['eval']['version']}, this is "
               f"{new['eval']['family']} v{new['eval']['version']}: not comparable, re-run the eval on the published ONNX")
-        if not force:
-            raise SystemExit('stopped (use --force to publish anyway)')
+        if not allow_new_eval:
+            raise SystemExit('stopped (--allow-new-eval to publish anyway)')
     else:
         lines, worse = compare(new, old, new['eval']['ranking'])  # the rules the family recorded in eval.json
         print('\n'.join(lines))
-        if worse and not force:
-            raise SystemExit(f"stopped: worse than the published version on {', '.join(worse)} (--force to publish anyway)")
+        if worse and not allow_worse:
+            raise SystemExit(f"stopped: worse than the published version on {', '.join(worse)} (--allow-worse to publish anyway)")
     new_plant, old_plant = json.loads((pkg / 'plant.json').read_text()), current(repo, 'plant.json')
     if old_plant and old_plant['plant_hash'] != new_plant['plant_hash']:
         print(f"  PLANT CHANGED {old_plant['plant_hash']} -> {new_plant['plant_hash']}:")
         print('\n'.join(plant_diff(new_plant, old_plant)) or '  (no field differs; hash scheme changed)')
-        if not plant_changed:
+        if not allow_plant_change:
             raise SystemExit('stopped: the robot differs from the published version; check the lines above, '
-                             'then re-run with --plant-changed if they are intended')
+                             'then re-run with --allow-plant-change if they are intended')
     for w in new_plant.get('warnings', []):
         print('  warning:', w)
     files = sorted(p.relative_to(pkg).as_posix() for p in pkg.rglob('*') if p.is_file())

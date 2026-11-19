@@ -43,10 +43,10 @@ uv run policyhub space                                        # preview; --uploa
 uv run policyhub check --task <TASK> --family velstand        # contract, plant, what collides, robot.xml bakes
                                                               # (--out out/bake keeps it for a MuJoCo viewer)
 uv run policyhub eval velstand --task <TASK> --onnx x.onnx --out eval.json
-uv run policyhub package --onnx x.onnx --checkpoint <run>/model_N.pt --eval eval.json --run-dir <run> \
-    --meta policy.yaml --out out/<repo-name>
-uv run policyhub publish out/<repo-name> --tag v1             # preview: compares, uploads nothing
-uv run policyhub publish out/<repo-name> --tag v1 --upload    # create repo, upload, tag
+uv run policyhub package --onnx x.onnx --checkpoint <run>/model_N.pt --eval eval.json \
+    --policy-yaml policy.yaml --out out/<repo-name>
+uv run policyhub publish out/<repo-name>                      # preview: compares, uploads nothing
+uv run policyhub publish out/<repo-name> --upload             # create repo, upload, tag the next vN
 ```
 
 `policy.yaml` is the only hand-written file per package: repo (`<org>/<name>-<owner>`), owner,

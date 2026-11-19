@@ -25,8 +25,8 @@ def scrub_home(obj):
     return obj
 
 
-def build(*, cfg, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: dict, out: Path,
-          replay: Path | None = None, checkpoint: Path | None = None) -> Path:
+def build(*, cfg, onnx: Path, checkpoint: Path, eval_res: dict, meta: dict, plant: dict, out: Path,
+          replay: Path | None = None) -> Path:
     from policyhub.hub.training import checkpoint_position, live_final, unknown_curricula
 
     for k in ('repo', 'owner', 'description', 'command'):
@@ -34,20 +34,14 @@ def build(*, cfg, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: 
             raise SystemExit(f"policy.yaml is missing '{k}' (see AGENTS.md)")
     if not meta['repo'].endswith(f"-{meta['owner']}"):
         raise SystemExit(f"repo {meta['repo']} must end with -{meta['owner']} (one repo per person: <org>/<name>-<owner>)")
+    run_dir = checkpoint.parent
     env = load_cfg(run_dir / 'params/env.yaml')
     agent = load_cfg(run_dir / 'params/agent.yaml')
     warnings = []
-    if checkpoint:
-        position = checkpoint_position(checkpoint)
-        if position['env_steps'] is None:
-            position['env_steps'] = position['iteration'] * agent['num_steps_per_env']
-            warnings.append('checkpoint has no env step counter: estimated from its iteration')
-    elif 'iterations' in meta:
-        position = {'checkpoint': None, 'iteration': meta['iterations'],
-                    'env_steps': meta['iterations'] * agent['num_steps_per_env']}
-        warnings.append("no --checkpoint: training position taken from policy.yaml 'iterations'")
-    else:
-        raise SystemExit("pass --checkpoint (the .pt the ONNX was exported from), or set 'iterations' in policy.yaml")
+    position = checkpoint_position(checkpoint)
+    if position['env_steps'] is None:
+        position['env_steps'] = position['iteration'] * agent['num_steps_per_env']
+        warnings.append('checkpoint has no env step counter: estimated from its iteration')
     summary = summarize(env, agent, position['env_steps'])
     final, w = live_final(eval_res['task'], position['env_steps'], env)
     warnings += w
@@ -65,8 +59,7 @@ def build(*, cfg, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: 
     shutil.copy(onnx, out / 'policy.onnx')
     if replay:
         shutil.copy(replay, out / 'replay.mp4')
-    if checkpoint:
-        shutil.copy(checkpoint, out / 'checkpoint.pt')   # so others can continue training from exactly here
+    shutil.copy(checkpoint, out / 'checkpoint.pt')   # so others can continue training from exactly here
 
     family = eval_res['eval']['family']
     home = plant['robot']['joints']['home_rad']

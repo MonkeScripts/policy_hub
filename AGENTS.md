@@ -52,18 +52,20 @@ Run from the training repo root. Put every output under `logs/hub/` (git-ignored
    command, few falls) and the run's iteration count. A smoke run is never published: the tag is
    used up for good.
 5. **Package**: write `policy.yaml` (below), then
-   `uv run policyhub package --onnx <file> --checkpoint logs/rsl_rl/<exp>/<run>/model_<N>.pt --eval logs/hub/<name>.eval.json --run-dir logs/rsl_rl/<exp>/<run> --meta policy.yaml --replay logs/hub/<name>.replay.mp4 --out logs/hub/<repo-name>`
-   - `--checkpoint` is the `.pt` the ONNX was exported from: it gives the training position, and the
+   `uv run policyhub package --onnx <file> --checkpoint logs/rsl_rl/<exp>/<run>/model_<N>.pt --eval logs/hub/<name>.eval.json --policy-yaml logs/hub/policy.yaml --replay logs/hub/<name>.replay.mp4 --out logs/hub/<repo-name>`
+   - `--checkpoint` is the `.pt` the ONNX was exported from, in its run folder: it gives the run's
+     configs, the training position, and the
      card's final reward weights come from the task's own curricula applied there. The output ends
      with `wrote ...` and then its `warning:` lines (e.g. task code changed since training): pass
      every one on to the human.
-6. **Preview**: `uv run policyhub publish logs/hub/<repo-name> --tag vN`
+6. **Preview**: `uv run policyhub publish logs/hub/<repo-name>` (the tag defaults to the next free `vN`)
    - Prints how far the policy trained, the comparison with the published version, any plant
      change, warnings, and the file list. It reads the Hub but needs no login.
    - Show this output to the human, unedited.
 7. **Publish** only when the human says so for this package: add `--upload`.
-   Add `--plant-changed` only if the human has read the plant diff and confirmed it,
-   `--force` only if they want it published despite a regression.
+   Add `--allow-plant-change` only if the human has read the plant diff and confirmed it,
+   `--allow-worse` only if they want it published despite a regression, `--allow-new-eval` only
+   if they compared it with the published ONNX re-run on the current eval.
 
 ## Hard rules
 
@@ -94,7 +96,7 @@ Run from the training repo root. Put every output under `logs/hub/` (git-ignored
 | C9 | Event `foot_friction` with `params["ranges"]` | Keep the name (optional `foot_friction_interval`, `foot_torsion*`) |
 | C10 | Push events have `push` in the name; termination `time_out` exists | Rename the push event |
 | C11 | Get-up families: reset event `random_prone_init` with `prone_prob`, `face_down_prob`, `crouch_prob` | Use the template's VelStand prone reset |
-| C12 | Run directory has `params/env.yaml` and `params/agent.yaml` | Point `--run-dir` at the run folder mjlab wrote |
+| C12 | Run directory has `params/env.yaml` and `params/agent.yaml` | Pass a `--checkpoint` inside the run folder mjlab wrote |
 | C13 | Optional: contact sensor `feet_ground_contact` | Without it, standing double support is `null` |
 
 `check` also rejects a task whose play config (what evals run) builds a different robot than its
@@ -121,7 +123,6 @@ runtime_notes:                             # only what the runtime must do diffe
 lineage: [velstand_s2r3b it 7999, velstand_s2r3 it 2000]   # warm starts, newest first; omit if from scratch
 code_repo: <public URL of the training code, or "local only" for a private one>
 code_dir: .                                # records the commit the run trained on (from the run folder)
-# iterations: 8000                         # only if there is no --checkpoint (then a warning is printed)
 ```
 
 Gains, HOME, joint order, supply and the rest come from the plant, not from this file.
