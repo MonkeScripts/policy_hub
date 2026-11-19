@@ -89,8 +89,7 @@ class Sim:
         assert self.obs['actor'].shape[1] == self.pol.obs_len, 'task observations do not match the ONNX input'
 
     def step(self, vx: float = 0.0, wz: float = 0.0, vy: float = 0.0) -> None:
-        """Hold the twist command at (vx, vy, wz); families that reuse the slots (flamingo: [flag, side, 0])
-        pass their values through the same three."""
+        """Hold the twist command at (vx, vy, wz)."""
         self.twist.vel_command_b[:] = 0.0
         self.twist.vel_command_b[:, 0], self.twist.vel_command_b[:, 1], self.twist.vel_command_b[:, 2] = vx, vy, wz
         for c in self.other_cmds:  # head / body pose commands held at neutral
