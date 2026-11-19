@@ -8,11 +8,18 @@ mjlab tasks from there, and never changes it.
 
 ```
 policyhub/
-├── policyhub/   the tool: config, policy (ONNX), sim (fixed eval conditions), plant (read out of the
-│                task), bake (the robot as plain MJCF), package (Hub folder), publish, space (the
-│                robot's ranking page), cli
+├── policyhub/
+│   ├── cli.py        the commands below
+│   ├── config.py     policyhub.yaml
+│   ├── version.py    which policyhub produced a result
+│   ├── robot/        what the training repo's task builds: contract (the rules `check` enforces),
+│   │                 plant (plant.json, plant_hash), bake (robot.xml + assets/)
+│   ├── eval/         a family's exam: families (finds eval.py), sim (env under fixed conditions),
+│   │                 policy (the ONNX); family eval.py files build on sim and policy
+│   └── hub/          Hugging Face: package (the folder), training (training.json), card (README.md),
+│                     publish (compare + push), space (the robot's ranking page)
 ├── examples/microduck/   a worked example: policyhub.yaml + families/ (walk, velstand)
-└── SPEC.md      the package format
+└── SPEC.md           the package format
 ```
 
 ## Use
@@ -50,7 +57,7 @@ description, what the command inputs mean, runtime notes, lineage.
 A family is one action (walk, stand up, ...) and its exam. Each robot owns its families: everyone
 ranking that family in the robot's Space runs the same file, so results compare. `<families>/<name>/eval.py` defines `FAMILY`, `VERSION`, `RANKING` (per headline metric:
 `"higher"`, `"lower"` or `("closer", target)`) and `run(task, onnx_path) -> dict` returning the
-eval.json content, built with `policyhub.sim` and `policyhub.policy`. `examples/microduck/families`
+eval.json content, built with `policyhub.eval.sim` and `policyhub.eval.policy`. `examples/microduck/families`
 has two to copy from; change a test, condition or threshold and bump `VERSION`.
 
 ## Using a package without this tool

@@ -62,9 +62,10 @@ def main() -> None:
             importlib.import_module(mod)
 
     if a.cmd == 'check':
-        from policyhub import config, families
-        from policyhub.bake import table
-        from policyhub.plant import extract
+        from policyhub import config
+        from policyhub.eval import families
+        from policyhub.robot.bake import table
+        from policyhub.robot.plant import extract
         cfg = config.load(a.config)
         d = extract(a.task, needs_prone=bool(a.family) and getattr(families.load(cfg, a.family), 'NEEDS_PRONE', False),
                     mass_g=cfg.mass_g)
@@ -73,12 +74,13 @@ def main() -> None:
         for w in d.get('warnings', []):
             print('warning:', w)
     elif a.cmd == 'bake':
-        from policyhub.bake import bake, table
+        from policyhub.robot.bake import bake, table
         r = bake(a.task, a.out)
         print(table(r['colliders']))
         print(f"wrote {a.out / r['file']} + {r['n_meshes']} meshes ({r['assets_mb']} MB); reload matches the training model")
     elif a.cmd == 'eval':
-        from policyhub import config, families
+        from policyhub import config
+        from policyhub.eval import families
         from policyhub.version import hub_version
         fam = families.load(config.load(a.config), a.family)
         if a.replay:
@@ -94,8 +96,8 @@ def main() -> None:
         print(f"wrote {a.out} in {res['runtime_s']} s")
     elif a.cmd == 'package':
         from policyhub import config
-        from policyhub.package import build
-        from policyhub.plant import extract
+        from policyhub.hub.package import build
+        from policyhub.robot.plant import extract
         cfg = config.load(a.config)
         ev = json.loads(a.eval.read_text())
         meta = yaml.safe_load(a.meta.read_text())
@@ -107,10 +109,10 @@ def main() -> None:
             print('warning:', w)
     elif a.cmd == 'space':
         from policyhub import config
-        from policyhub.space import publish_space
+        from policyhub.hub.space import publish_space
         publish_space(config.load(a.config), yes=a.yes)
     elif a.cmd == 'publish':
-        from policyhub.publish import publish
+        from policyhub.hub.publish import publish
         publish(a.package, a.tag, yes=a.yes, force=a.force, plant_changed=a.plant_changed)
 
 

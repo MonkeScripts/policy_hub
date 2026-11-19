@@ -15,8 +15,9 @@ from mjlab.envs.mdp.events import push_by_setting_velocity
 from mjlab.managers import EventTermCfg
 from mjlab.tasks.registry import load_env_cfg
 
-from policyhub import contract
-from policyhub.policy import OnnxPolicy
+from policyhub.robot import contract
+
+from policyhub.eval.policy import OnnxPolicy
 
 SEED = 0
 FALL_TILT = math.radians(45)

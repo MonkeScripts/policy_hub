@@ -152,5 +152,5 @@ Gains, HOME, joint order, supply and the rest come from the plant, not from this
 Adding a family: create `<families>/<name>/eval.py` (examples/microduck/families has two) defining `FAMILY`, `VERSION`, `RANKING`,
 `NEEDS_PRONE` (if it uses prone starts), `replay(task, onnx_path, path)` (one labelled mp4 of its
 scenarios) and `run(task, onnx_path) -> dict` (the eval.json
-content, built with `policyhub.sim` and `policyhub.policy`), plus a `README.md` saying what the action
+content, built with `policyhub.eval.sim` and `policyhub.eval.policy`), plus a `README.md` saying what the action
 is and what each ranked metric means. Test only what that action is for.

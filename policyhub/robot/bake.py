@@ -11,11 +11,11 @@ servo dynamics, latency, supply, randomization, gains); those are in plant.json 
 
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 from pathlib import Path
 
-from policyhub.policy import sha256
 
 NOTE = """<!--
   Baked by policyhub from task {task}.
@@ -124,6 +124,6 @@ def bake(task: str, out: Path) -> dict:
         raise BakeError(f"task {task}: robot.xml reloads differently from the training model in {', '.join(bad)}")
 
     exprs = [e for c in robot.collisions for e in c.geom_names_expr]
-    return {'file': 'robot.xml', 'sha256': sha256(out / 'robot.xml'),
+    return {'file': 'robot.xml', 'sha256': hashlib.sha256((out / 'robot.xml').read_bytes()).hexdigest(),
             'colliders': colliders(m, exprs), 'n_meshes': len(files),
             'assets_mb': round(sum((out / 'assets' / f).stat().st_size for f in files) / 1e6, 1)}

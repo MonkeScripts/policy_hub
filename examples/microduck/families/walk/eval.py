@@ -20,8 +20,8 @@ import time
 
 import torch
 
-from policyhub.policy import OnnxPolicy, sha256
-from policyhub.sim import FALL_TILT, SEED, Sim, frames, make_env, write_replay
+from policyhub.eval.policy import OnnxPolicy, sha256
+from policyhub.eval.sim import FALL_TILT, SEED, Sim, frames, make_env, write_replay
 
 FAMILY = 'walk'
 VERSION = '1.1'  # 1.1: the head and body commands are held like the twist (in 1.0 they redrew for one step every 2-5 s)

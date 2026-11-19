@@ -1,7 +1,7 @@
-"""Where training ended and what its curricula had set by then.
+"""training.json: how a policy was trained, read from the run folder and its checkpoint.
 
-The run's params/env.yaml holds the curriculum *plan*. What a policy was actually trained with at
-the end comes from two things:
+params/env.yaml and agent.yaml give the full configs and the summary people compare. They hold
+the curriculum *plan*; what a policy was actually trained with at the end comes from two things:
   - the checkpoint the ONNX was exported from: its iteration and the env step counter the
     curricula run on (rsl_rl saves infos.env_state.common_step_counter);
   - the task's own curriculum functions, applied at that counter in a 1-robot env, then reading
@@ -13,6 +13,75 @@ after training), the live result is not trusted and the plan is replayed instead
 from __future__ import annotations
 
 from pathlib import Path
+
+import yaml
+
+from policyhub.version import git
+
+
+# -- params/*.yaml are written with python tags; read them as plain data ------------------------
+class _Loader(yaml.SafeLoader):
+    pass
+
+
+def _python_tag(loader, suffix, node):
+    kind, _, name = suffix.partition(':')
+    if kind == 'tuple':
+        return loader.construct_sequence(node, deep=True)
+    if kind == 'name':
+        return f"<{name}>"
+    if kind.startswith('object'):  # enums and dataclass instances: keep the class and its state
+        val = (loader.construct_sequence(node, deep=True) if isinstance(node, yaml.SequenceNode)
+               else loader.construct_mapping(node, deep=True) if isinstance(node, yaml.MappingNode)
+               else loader.construct_scalar(node))
+        return {'<class>': name, 'value': val}
+    return loader.construct_scalar(node) if isinstance(node, yaml.ScalarNode) else None
+
+
+_Loader.add_multi_constructor('tag:yaml.org,2002:python/', _python_tag)
+
+
+def load_cfg(path: Path) -> dict:
+    return yaml.load(path.read_text(), Loader=_Loader)
+
+
+def _strip_func(d: dict) -> dict:
+    return {k: v for k, v in d.items() if k != 'func'}
+
+
+def final_weights(env: dict, env_steps: int) -> dict:
+    """Reward weights the policy ended training with: the configured weight, overridden by the
+    last curriculum stage reached (stages are in env steps = iterations x num_steps_per_env)."""
+    w = {k: v['weight'] for k, v in (env.get('rewards') or {}).items()}
+    for c in (env.get('curriculum') or {}).values():
+        p = c.get('params') or {}
+        if 'reward_name' in p and 'weight_stages' in p:
+            reached = [s for s in p['weight_stages'] if env_steps > s['step']]
+            if reached:
+                w[p['reward_name']] = reached[-1]['weight']
+    return w
+
+
+def summarize(env: dict, agent: dict, env_steps: int) -> dict:
+    """The parts people compare. Everything else stays in env/agent below."""
+    return {
+        'env_steps': env_steps,
+        'rewards_final': final_weights(env, env_steps),
+        'rewards_final_source': 'replayed from the curriculum plan',
+        'randomization': {k: v.get('params') for k, v in (env.get('events') or {}).items()},
+        'rewards_initial': {k: v['weight'] for k, v in (env.get('rewards') or {}).items()},
+        'terminations': sorted((env.get('terminations') or {}).keys()),
+        'curriculum': {k: v.get('params') for k, v in (env.get('curriculum') or {}).items()},
+        'commands': {k: _strip_func(v) for k, v in (env.get('commands') or {}).items()},
+        'ppo': {'actor': agent['actor']['hidden_dims'], 'algorithm': agent.get('algorithm'),
+                'num_steps_per_env': agent['num_steps_per_env'], 'seed': agent['seed']},
+    }
+
+
+def git_info(repo: Path) -> dict:
+    g = lambda *a: git(repo, *a)
+    return {'commit': g('rev-parse', '--short=9', 'HEAD'), 'branch': g('branch', '--show-current'),
+            'dirty': bool(g('status', '--porcelain', '--untracked-files=no'))}
 
 
 def checkpoint_position(path) -> dict:
@@ -30,7 +99,7 @@ def live_final(task: str, env_steps: int, env_yaml: dict) -> tuple[dict | None, 
     from mjlab.envs import ManagerBasedRlEnv
     from mjlab.tasks.registry import load_env_cfg
 
-    from policyhub.plant import _plain
+    from policyhub.robot.plant import _plain
 
     cfg = load_env_cfg(task, play=False)
     planned = {k: v['weight'] for k, v in (env_yaml.get('rewards') or {}).items()}

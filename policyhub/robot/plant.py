@@ -4,7 +4,7 @@ Nothing is written by hand: the description comes from what the training repo's 
 builds (compiled model masses and collision geometry, servo model and gains, supply, latency,
 HOME, joint ranges, friction randomization, control rate).
 
-Collision geometry is read from the compiled robot after mjlab's edits (policyhub.bake), not matched
+Collision geometry is read from the compiled robot after mjlab's edits (bake.py), not matched
 by name: onshape-to-robot's collision meshes are unnamed, so a name filter neither removes them in
 training nor finds them here.
 
@@ -23,7 +23,6 @@ import json
 import re
 from pathlib import Path
 
-from policyhub.policy import sha256
 
 
 def _plain(v):
@@ -43,7 +42,7 @@ def _actuator(act) -> dict:
         if v is not None and f.name != 'target_names_expr':
             d[f.name] = v
     if 'json_path' in d:  # the servo fit file: by name and content, not by local path
-        d['json_sha256_16'] = sha256(d['json_path'])[:16] if Path(d['json_path']).is_file() else None
+        d['json_sha256_16'] = hashlib.sha256(Path(d['json_path']).read_bytes()).hexdigest()[:16] if Path(d['json_path']).is_file() else None
         d['json_path'] = Path(d['json_path']).name
     return d
 
@@ -76,7 +75,7 @@ def sanity(d: dict, mass_g: tuple[float, float] | None = None) -> list[str]:
 
 def _robot_facts(cfg, m, task: str) -> dict:
     """The hashed description of the robot a task builds."""
-    from policyhub import contract
+    from policyhub.robot import contract
 
     robot = cfg.scene.entities['robot']
     name = lambda kind, i: m.names[getattr(m, f"name_{kind}adr")[i]:].split(b'\0', 1)[0].decode()
@@ -108,8 +107,8 @@ def extract(task: str, needs_prone: bool = False,
             mass_g: tuple[float, float] | None = None) -> dict:
     """The plant of the train config (the robot the policy learned on). Raises if the play config,
     which evals run, builds a different robot."""
-    from policyhub import contract
-    from policyhub.bake import build, colliders
+    from policyhub.robot import contract
+    from policyhub.robot.bake import build, colliders
 
     cfg, _, m = build(task)  # the robot after mjlab's edits, at the task's physics timestep
     contract.check(cfg, task, needs_prone=needs_prone)
