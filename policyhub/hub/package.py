@@ -12,8 +12,6 @@ from policyhub.eval.policy import sha256
 from policyhub.hub.card import card
 from policyhub.hub.training import git_info, load_cfg, summarize
 
-SPEC_VERSION = 3
-
 
 def scrub_home(obj):
     """Replace local home-directory prefixes in strings with '~' (no machine paths in public packages)."""
@@ -75,7 +73,7 @@ def build(*, cfg, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: 
     joint_order = meta.get('joint_order') or list(home)
     act = plant['robot']['actuators'][0]
     manifest = {
-        'spec_version': SPEC_VERSION, 'robot': cfg.robot, 'repo': meta['repo'], 'owner': meta['owner'],
+        'robot': cfg.robot, 'repo': meta['repo'], 'owner': meta['owner'],
         'family': family, 'description': meta['description'], 'command': meta['command'],
         'control_hz': plant['robot']['control']['hz'],
         'plant': {'plant_hash': plant['plant_hash'], 'task': plant['task_modelling']['task']},
@@ -86,7 +84,7 @@ def build(*, cfg, onnx: Path, run_dir: Path, eval_res: dict, meta: dict, plant: 
         'model': {'file': model['file'], 'sha256': model['sha256']},
     }
     training = {
-        'spec_version': SPEC_VERSION, 'task': eval_res['task'], 'run': agent['run_name'],
+        'task': eval_res['task'], 'run': agent['run_name'],
         'iterations': position['iteration'], 'position': position, 'lineage': meta.get('lineage', []),
         'warnings': warnings,
         'code': {'repo': meta.get('code_repo'), **git_info(Path(meta['code_dir']))} if meta.get('code_dir') else {'repo': meta.get('code_repo')},

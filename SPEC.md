@@ -30,7 +30,7 @@ tag in the same repo, never a new repo.
 - `joint_order`, `home` - default_joint_pos in policy joint order
 - `runtime_notes` - anything else the runtime must do (fall stop, supply, clamping)
 - `model {file, sha256}` - the baked robot (spec v2 on; absent in v1 packages: use your own model)
-- `onnx_sha256`, `spec_version`, `repo`
+- `onnx_sha256`, `repo`
 
 ## plant.json
 
@@ -78,10 +78,12 @@ model-index:
 
 ## Versions
 
+Packages carry no version field; tell the layouts apart by the fields below.
+
 - v1: no `robot.xml`; `plant.json` collision geometry listed by name match only (it missed unnamed meshes).
 - v2: `robot.xml` + `assets/`, `manifest.model`; collision geometry from the compiled robot.
   `plant_hash` is computed the same way, so v1 and v2 packages of one robot share it.
 - v2, later addition (optional, older v2 packages lack it): `checkpoint.pt`.
 - v3: `manifest.json` keeps only the fields above; `robot` is the robot name (was `robot.model`),
   `control_hz` moved up from `robot.control_hz`. `training.json` `summary` no longer repeats the plant
-  (it is in `plant.json`).
+  (it is in `plant.json`). The `spec_version` field older packages carry is gone.

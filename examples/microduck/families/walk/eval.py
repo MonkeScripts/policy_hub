@@ -164,7 +164,6 @@ def run(task: str, onnx_path: str) -> dict:
         'push_standing_falls': pu['standing']['falls_share'],
     }
     return {
-        'spec_version': 1,
         'eval': {'family': FAMILY, 'version': VERSION, 'seed': SEED, 'num_envs': N,
                  'conditions': {'low_friction': LOW_FRICTION, 'low_supply': LOW_SUPPLY, 'push': PUSH,
                                 'fall_tilt_deg': round(math.degrees(FALL_TILT))}},

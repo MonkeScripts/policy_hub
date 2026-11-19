@@ -205,7 +205,6 @@ def run(task: str, onnx_path: str) -> dict:
         'push_walking_up_at_end': m['pushes']['walking_vx0.3']['up_at_end_share'],
     }
     return {
-        'spec_version': 1,
         'eval': {'family': FAMILY, 'version': VERSION, 'seed': SEED, 'num_envs': N,
                  'conditions': {'low_friction': LOW_FRICTION, 'low_supply': LOW_SUPPLY, 'push': PUSH,
                                 'fall_tilt_deg': round(math.degrees(FALL_TILT)), 'up_band_m': UP_BAND}},
