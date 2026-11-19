@@ -42,15 +42,15 @@ def main() -> None:
     k.add_argument('--checkpoint', type=Path, help='the .pt the ONNX was exported from (training position)')
     k.add_argument('--out', required=True, type=Path)
 
-    u = sub.add_parser('publish', help='compare with the Hub, then push (dry run unless --yes)')
+    u = sub.add_parser('publish', help='compare with the published version; --upload creates the repo, uploads and tags')
     u.add_argument('package', type=Path)
     u.add_argument('--tag', required=True)
-    u.add_argument('--yes', action='store_true')
+    u.add_argument('--upload', action='store_true', help='create the repo, upload and tag (default: preview only)')
     u.add_argument('--force', action='store_true', help='publish even if worse or not comparable')
     u.add_argument('--plant-changed', action='store_true', help='accept a robot that differs from the published one')
 
-    sp = sub.add_parser('space', help="create or update the robot's ranking Space (dry run unless --yes)")
-    sp.add_argument('--yes', action='store_true')
+    sp = sub.add_parser('space', help="preview the robot's ranking Space; --upload creates or updates it")
+    sp.add_argument('--upload', action='store_true', help='create or update the Space (default: preview only)')
     a = ap.parse_args()
     if a.imports:
         import importlib
@@ -108,10 +108,10 @@ def main() -> None:
     elif a.cmd == 'space':
         from policyhub import config
         from policyhub.hub.space import publish_space
-        publish_space(config.load(a.config), yes=a.yes)
+        publish_space(config.load(a.config), upload=a.upload)
     elif a.cmd == 'publish':
         from policyhub.hub.publish import publish
-        publish(a.package, a.tag, yes=a.yes, force=a.force, plant_changed=a.plant_changed)
+        publish(a.package, a.tag, upload=a.upload, force=a.force, plant_changed=a.plant_changed)
 
 
 if __name__ == '__main__':

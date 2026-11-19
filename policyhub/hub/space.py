@@ -36,7 +36,7 @@ Written by `policyhub space`: change policyhub.yaml and re-run it instead of edi
             'space.json': json.dumps({'robot': cfg.robot, 'org': cfg.org, 'title': title}, indent=1) + '\n'}
 
 
-def publish_space(cfg, yes: bool = False) -> None:
+def publish_space(cfg, upload: bool = False) -> None:
     from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
     from huggingface_hub.utils import EntryNotFoundError, RepositoryNotFoundError
 
@@ -53,8 +53,8 @@ def publish_space(cfg, yes: bool = False) -> None:
         except EntryNotFoundError:
             state = 'new file'
         print(f"  {name:12s} {state}")
-    if not yes:
-        print('dry run: nothing uploaded (add --yes to create or update the Space)')
+    if not upload:
+        print('preview only: nothing uploaded (add --upload to create or update the Space)')
         return
     api = HfApi()
     api.create_repo(cfg.space, repo_type='space', space_sdk='static', exist_ok=True)

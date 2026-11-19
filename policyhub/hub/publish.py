@@ -72,7 +72,7 @@ def plant_diff(new: dict, old: dict) -> list[str]:
     return [f"  {k}: {a.get(k)} -> {b.get(k)}" for k in sorted(a.keys() | b.keys()) if a.get(k) != b.get(k)]
 
 
-def publish(pkg: Path, tag: str, yes: bool = False, force: bool = False,
+def publish(pkg: Path, tag: str, upload: bool = False, force: bool = False,
             plant_changed: bool = False) -> None:
     manifest = json.loads((pkg / 'manifest.json').read_text())
     new = json.loads((pkg / 'eval.json').read_text())
@@ -110,8 +110,8 @@ def publish(pkg: Path, tag: str, yes: bool = False, force: bool = False,
         print('  warning:', w)
     files = sorted(p.relative_to(pkg).as_posix() for p in pkg.rglob('*') if p.is_file())
     print('  files:', ', '.join(files))
-    if not yes:
-        print('dry run: nothing uploaded (add --yes to publish)')
+    if not upload:
+        print('preview only: nothing uploaded (add --upload to create the repo, upload and tag)')
         return
     api = HfApi()
     api.create_repo(repo, repo_type='model', exist_ok=True)
